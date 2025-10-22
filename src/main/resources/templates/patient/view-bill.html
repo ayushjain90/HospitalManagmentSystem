@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Bill Details - Patient</title>
+    <style>
+        .bill-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .detail-card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .detail-value {
+            color: #212529;
+            margin-bottom: 15px;
+        }
+        .amount-breakdown {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+        .total-amount {
+            background: #28a745;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .status-badge {
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .status-paid { background-color: #28a745; color: white; }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-cancelled { background-color: #dc3545; color: white; }
+        .status-refunded { background-color: #6c757d; color: white; }
+        .payment-notice {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <!-- Header -->
+                    <div class="bill-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h2><i class="fas fa-file-invoice-dollar"></i> Bill #<span th:text="${bill.id}"></span></h2>
+                                <p class="mb-0">Generated on <span th:text="${#temporals.format(bill.billDate, 'MMMM dd, yyyy HH:mm')}"></span></p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span class="status-badge" 
+                                      th:classappend="${bill.paymentStatus.name().toLowerCase() == 'paid'} ? 'status-paid' : 
+                                                     (${bill.paymentStatus.name().toLowerCase() == 'pending'} ? 'status-pending' : 
+                                                     (${bill.paymentStatus.name().toLowerCase() == 'cancelled'} ? 'status-cancelled' : 'status-refunded'))"
+                                      th:text="${bill.paymentStatus}"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Notice for Pending Bills -->
+                    <div th:if="${bill.paymentStatus.name() == 'PENDING'}" class="payment-notice">
+                        <h6><i class="fas fa-exclamation-circle"></i> Payment Required</h6>
+                        <p class="mb-0">This bill is pending payment. Please contact the billing department at <strong>(555) 123-4567</strong> or visit the front desk to make a payment.</p>
+                    </div>
+
+                    <div class="row">
+                        <!-- Left Column - Details -->
+                        <div class="col-md-8">
+                            <!-- Patient Information -->
+                            <div class="detail-card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-user"></i> Patient Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="detail-label">Full Name</div>
+                                            <div class="detail-value" th:text="${bill.patient.fullName}"></div>
+                                            
+                                            <div class="detail-label">Email</div>
+                                            <div class="detail-value" th:text="${bill.patient.email}"></div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="detail-label">Phone</div>
+                                            <div class="detail-value" th:text="${bill.patient.phoneNumber}"></div>
+                                            
+                                            <div class="detail-label">Patient ID</div>
+                                            <div class="detail-value" th:text="'P' + ${bill.patient.id}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Appointment Information -->
+                            <div class="detail-card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-calendar-check"></i> Appointment Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="detail-label">Doctor</div>
+                                            <div class="detail-value">
+                                                Dr. <span th:text="${bill.appointment.doctor.fullName}"></span>
+                                                <br><small class="text-muted" th:text="${bill.appointment.doctor.specialization}"></small>
+                                            </div>
+                                            
+                                            <div class="detail-label">Reason for Visit</div>
+                                            <div class="detail-value" th:text="${bill.appointment.reason}"></div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="detail-label">Appointment Date</div>
+                                            <div class="detail-value" th:text="${#temporals.format(bill.appointment.appointmentDateTime, 'MMMM dd, yyyy HH:mm')}"></div>
+                                            
+                                            <div class="detail-label">Status</div>
+                                            <div class="detail-value">
+                                                <span class="badge bg-success" th:text="${bill.appointment.status}"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div th:if="${bill.appointment.prescription}" class="mt-3">
+                                        <div class="detail-label">Prescription</div>
+                                        <div class="detail-value" th:text="${bill.appointment.prescription}"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bill Notes -->
+                            <div th:if="${bill.notes}" class="detail-card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-sticky-note"></i> Additional Notes</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p th:text="${bill.notes}"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column - Amount Breakdown -->
+                        <div class="col-md-4">
+                            <div class="amount-breakdown">
+                                <h5 class="mb-3"><i class="fas fa-calculator"></i> Amount Breakdown</h5>
+                                
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Consultation Fee:</span>
+                                    <span th:text="'₹' + ${bill.formattedConsultationFee}"></span>
+                                </div>
+                                
+                                <div th:if="${bill.medicineCost != null && bill.medicineCost > 0}" class="d-flex justify-content-between mb-2">
+                                    <span>Medicine Cost:</span>
+                                    <span th:text="'₹' + ${#numbers.formatDecimal(bill.medicineCost, 1, 2)}"></span>
+                                </div>
+                                
+                                <div th:if="${bill.testCost != null && bill.testCost > 0}" class="d-flex justify-content-between mb-2">
+                                    <span>Test/Lab Cost:</span>
+                                    <span th:text="'₹' + ${#numbers.formatDecimal(bill.testCost, 1, 2)}"></span>
+                                </div>
+                                
+                                <div th:if="${bill.roomCharges != null && bill.roomCharges > 0}" class="d-flex justify-content-between mb-2">
+                                    <span>Room Charges:</span>
+                                    <span th:text="'₹' + ${#numbers.formatDecimal(bill.roomCharges, 1, 2)}"></span>
+                                </div>
+                                
+                                <div th:if="${bill.otherCharges != null && bill.otherCharges > 0}" class="d-flex justify-content-between mb-2">
+                                    <span>Other Charges:</span>
+                                    <span th:text="'₹' + ${#numbers.formatDecimal(bill.otherCharges, 1, 2)}"></span>
+                                </div>
+                                
+                                <div th:if="${bill.discount != null && bill.discount > 0}" class="d-flex justify-content-between mb-2 text-success">
+                                    <span>Discount:</span>
+                                    <span th:text="'-₹' + ${#numbers.formatDecimal(bill.discount, 1, 2)}"></span>
+                                </div>
+                                
+                                <hr>
+                                <div class="total-amount mb-3">
+                                    Total: ₹<span th:text="${bill.formattedTotalAmount}"></span>
+                                </div>
+                            </div>
+
+                            <!-- Payment Information -->
+                            <div class="detail-card">
+                                <div class="card-header">
+                                    <h6><i class="fas fa-credit-card"></i> Payment Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="detail-label">Status</div>
+                                    <div class="detail-value">
+                                        <span class="status-badge" 
+                                              th:classappend="${bill.paymentStatus.name().toLowerCase() == 'paid'} ? 'status-paid' : 
+                                                             (${bill.paymentStatus.name().toLowerCase() == 'pending'} ? 'status-pending' : 
+                                                             (${bill.paymentStatus.name().toLowerCase() == 'cancelled'} ? 'status-cancelled' : 'status-refunded'))"
+                                              th:text="${bill.paymentStatus}"></span>
+                                    </div>
+                                    
+                                    <div th:if="${bill.paymentDate}">
+                                        <div class="detail-label">Payment Date</div>
+                                        <div class="detail-value" th:text="${#temporals.format(bill.paymentDate, 'MMMM dd, yyyy HH:mm')}"></div>
+                                    </div>
+                                    
+                                    <div th:if="${bill.paymentMethod}">
+                                        <div class="detail-label">Payment Method</div>
+                                        <div class="detail-value" th:text="${bill.paymentMethod}"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-grid gap-2">
+                                <a th:href="@{/bills/patient/print/{id}(id=${bill.id})}" 
+                                   class="btn btn-info" target="_blank">
+                                    <i class="fas fa-print"></i> Print Bill
+                                </a>
+                                <a href="/bills/patient" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to My Bills
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - Manipal Hospital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-info">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/}">
+                <i class="fas fa-hospital"></i> Manipal Hospital - Patient
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> <span sec:authentication="name">Patient</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/patient/dashboard}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><a class="dropdown-item" th:href="@{/patient/profile}"><i class="fas fa-user"></i> Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" th:href="@{/logout}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="list-group">
+                    <a th:href="@{/patient/dashboard}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a th:href="@{/patient/appointments}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar-alt"></i> My Appointments
+                    </a>
+                    <a th:href="@{/patient/book-appointment}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-plus"></i> Book Appointment
+                    </a>
+                    <a th:href="@{/patient/doctors}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-md"></i> Find Doctors
+                    </a>
+                    <a th:href="@{/bills/patient}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-invoice-dollar"></i> My Bills
+                    </a>
+                    <a th:href="@{/patient/profile}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user"></i> My Profile
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <h2 class="mb-4"><i class="fas fa-tachometer-alt"></i> Patient Dashboard</h2>
+                
+                <!-- Welcome Card -->
+                <div class="card mb-4 bg-info text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-hand-wave"></i> Welcome, <span th:text="${patient?.fullName ?: 'Patient'}">Patient</span>!
+                        </h5>
+                        <p class="card-text">Manage your appointments, view medical records, and stay connected with your healthcare providers.</p>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="row mb-4">
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-plus fa-3x text-success mb-3"></i>
+                                <h6 class="card-title">Book Appointment</h6>
+                                <a th:href="@{/patient/book-appointment}" class="btn btn-success btn-sm">Book Now</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
+                                <h6 class="card-title">My Appointments</h6>
+                                <a th:href="@{/patient/appointments}" class="btn btn-primary btn-sm">View All</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-user-md fa-3x text-info mb-3"></i>
+                                <h6 class="card-title">Find Doctors</h6>
+                                <a th:href="@{/patient/doctors}" class="btn btn-info btn-sm">Search</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-user fa-3x text-warning mb-3"></i>
+                                <h6 class="card-title">My Profile</h6>
+                                <a th:href="@{/patient/profile}" class="btn btn-warning btn-sm">View</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Upcoming Appointments -->
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-calendar-alt"></i> Upcoming Appointments
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Doctor</th>
+                                        <th>Specialization</th>
+                                        <th>Status</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="appointment : ${upcomingAppointments}" th:if="${upcomingAppointments != null and !upcomingAppointments.isEmpty()}">
+                                        <td th:text="${#temporals.format(appointment.appointmentDateTime, 'yyyy-MM-dd HH:mm')}"></td>
+                                        <td th:text="${appointment.doctor.fullName}"></td>
+                                        <td th:text="${appointment.doctor.specialization}"></td>
+                                        <td>
+                                            <span class="badge" th:classappend="${appointment.status == 'SCHEDULED'} ? 'bg-warning' : (${appointment.status == 'CONFIRMED'} ? 'bg-success' : (${appointment.status == 'COMPLETED'} ? 'bg-primary' : 'bg-danger'))" th:text="${appointment.status}"></span>
+                                        </td>
+                                        <td th:text="${appointment.reason}"></td>
+                                    </tr>
+                                    <tr th:if="${upcomingAppointments == null or upcomingAppointments.isEmpty()}">
+                                        <td colspan="5" class="text-center text-muted">
+                                            <i class="fas fa-calendar-times fa-2x mb-2"></i><br>
+                                            No upcoming appointments. <a th:href="@{/patient/book-appointment}">Book one now!</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

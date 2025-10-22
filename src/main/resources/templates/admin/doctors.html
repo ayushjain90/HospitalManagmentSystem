@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>Manage Doctors - Manipal Hospital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/}">
+                <i class="fas fa-hospital"></i> Manipal Hospital - Admin
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> <span sec:authentication="name">Admin</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/admin/dashboard}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" th:href="@{/logout}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="list-group">
+                    <a th:href="@{/admin/dashboard}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a th:href="@{/admin/patients}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users"></i> Patients
+                    </a>
+                    <a th:href="@{/admin/doctors}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-user-md"></i> Doctors
+                    </a>
+                    <a th:href="@{/admin/appointments}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar-alt"></i> Appointments
+                    </a>
+                    <a th:href="@{/bills/admin}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-invoice-dollar"></i> Bills
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-user-md text-success"></i> Doctor Management</h2>
+                    <div>
+                        <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addDoctorModal">
+                            <i class="fas fa-plus"></i> Add New Doctor
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="refreshDoctorList()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Alert Messages -->
+                <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle"></i> <span th:text="${message}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i> <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                
+                <!-- Search and Filter -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" class="form-control" id="searchDoctor" placeholder="Search doctors..." onkeyup="filterDoctors()">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="specializationFilter" onchange="filterDoctors()">
+                                    <option value="">All Specializations</option>
+                                    <option value="Cardiology">Cardiology</option>
+                                    <option value="Neurology">Neurology</option>
+                                    <option value="Orthopedics">Orthopedics</option>
+                                    <option value="Pediatrics">Pediatrics</option>
+                                    <option value="General Medicine">General Medicine</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="statusFilter" onchange="filterDoctors()">
+                                    <option value="">All Status</option>
+                                    <option value="available">Available</option>
+                                    <option value="unavailable">Unavailable</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                    <i class="fas fa-times"></i> Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Doctor Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="h5 mb-0" th:text="${totalDoctors ?: 0}">0</div>
+                                        <div class="small">Total Doctors</div>
+                                    </div>
+                                    <div><i class="fas fa-user-md fa-2x opacity-75"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="h5 mb-0" th:text="${availableDoctors ?: 0}">0</div>
+                                        <div class="small">Available Now</div>
+                                    </div>
+                                    <div><i class="fas fa-check-circle fa-2x opacity-75"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="h5 mb-0" th:text="${busyDoctors ?: 0}">0</div>
+                                        <div class="small">Busy</div>
+                                    </div>
+                                    <div><i class="fas fa-clock fa-2x opacity-75"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="h5 mb-0" th:text="${newDoctorsThisMonth ?: 0}">0</div>
+                                        <div class="small">New This Month</div>
+                                    </div>
+                                    <div><i class="fas fa-user-plus fa-2x opacity-75"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Doctors Grid View -->
+                <div class="row" id="doctorsContainer">
+                    <div th:each="doctor : ${doctors}" th:if="${doctors != null and !doctors.isEmpty()}" class="col-xl-4 col-lg-6 col-md-6 mb-4 doctor-card">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 text-primary" th:text="${doctor.fullName}">Dr. Name</h6>
+                                    <div>
+                                        <span class="badge me-1" th:classappend="${doctor.availableForConsultation} ? 'bg-success' : 'bg-warning'" th:text="${doctor.availableForConsultation} ? 'Available' : 'Busy'">Status</span>
+                                        <span class="badge" th:classappend="${doctor.enabled} ? 'bg-primary' : 'bg-danger'" th:text="${doctor.enabled} ? 'Active' : 'Inactive'">Active</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-stethoscope text-success me-2"></i>
+                                            <strong class="specialization" th:text="${doctor.specialization}">Specialization</strong>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-certificate text-info me-2"></i>
+                                            <span th:text="${doctor.licenseNumber}">License</span>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-clock text-warning me-2"></i>
+                                            <span th:text="${doctor.experienceYears} + ' years experience'">Experience</span>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-envelope text-primary me-2"></i>
+                                            <small th:text="${doctor.email}">Email</small>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-phone text-success me-2"></i>
+                                            <small th:text="${doctor.phoneNumber}">Phone</small>
+                                        </div>
+                                        <div th:if="${doctor.workingHours}" class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-business-time text-secondary me-2"></i>
+                                            <small th:text="${doctor.workingHours}">Working Hours</small>
+                                        </div>
+                                        <div th:if="${doctor.consultationFee}" class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-dollar-sign text-warning me-2"></i>
+                                            <small th:text="${doctor.consultationFee}">Consultation Fee</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light">
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" th:onclick="'viewDoctorSchedule(' + ${doctor.id} + ')'" title="View Doctor Schedule">
+                                        <i class="fas fa-calendar-week"></i> Schedule
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm" th:onclick="'editDoctor(' + ${doctor.id} + ')'">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <form th:action="@{'/admin/doctors/' + ${doctor.id} + '/toggle-availability'}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm" th:classappend="${doctor.availableForConsultation} ? 'btn-outline-warning' : 'btn-outline-success'">
+                                            <i class="fas" th:classappend="${doctor.availableForConsultation} ? 'fa-pause' : 'fa-play'"></i>
+                                            <span th:text="${doctor.availableForConsultation} ? 'Busy' : 'Available'"></span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- No doctors found -->
+                    <div th:if="${doctors == null or doctors.isEmpty()}" class="col-12">
+                        <div class="card">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-user-md fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Doctors Found</h5>
+                                <p class="text-muted">Start by adding your first doctor to the system.</p>
+                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addDoctorModal">
+                                    <i class="fas fa-plus"></i> Add First Doctor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Doctor Modal -->
+    <div class="modal fade" id="addDoctorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> Add New Doctor</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/doctors/add}" method="post">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" name="fullName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Username *</label>
+                                <input type="text" class="form-control" name="username" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-control" name="email" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone Number *</label>
+                                <input type="tel" class="form-control" name="phoneNumber" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Password *</label>
+                                <input type="password" class="form-control" name="password" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Specialization *</label>
+                                <select class="form-select" name="specialization" required>
+                                    <option value="">Select Specialization</option>
+                                    <option value="Cardiology">Cardiology</option>
+                                    <option value="Neurology">Neurology</option>
+                                    <option value="Orthopedics">Orthopedics</option>
+                                    <option value="Pediatrics">Pediatrics</option>
+                                    <option value="General Medicine">General Medicine</option>
+                                    <option value="Dermatology">Dermatology</option>
+                                    <option value="Psychiatry">Psychiatry</option>
+                                    <option value="Surgery">Surgery</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">License Number *</label>
+                                <input type="text" class="form-control" name="licenseNumber" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Experience (Years) *</label>
+                                <input type="number" class="form-control" name="experienceYears" min="0" max="50" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Working Hours</label>
+                                <input type="text" class="form-control" name="workingHours" placeholder="e.g., 9:00 AM - 5:00 PM">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Consultation Fee</label>
+                                <input type="text" class="form-control" name="consultationFee" placeholder="e.g., $100">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Qualifications</label>
+                                <textarea class="form-control" name="qualifications" rows="3" placeholder="Enter qualifications, certifications, etc."></textarea>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="availableForConsultation" checked>
+                                    <label class="form-check-label">Available for consultation</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Add Doctor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- View Doctor Modal -->
+    <div class="modal fade" id="viewDoctorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-calendar-week"></i> Doctor Schedule - <span id="scheduleDoctorName"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="doctorDetailsContent">
+                    <!-- Doctor details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Doctor Modal -->
+    <div class="modal fade" id="editDoctorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Doctor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editDoctorForm">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" id="editFullName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="editEmail" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone Number *</label>
+                                <input type="tel" class="form-control" id="editPhoneNumber" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Specialization *</label>
+                                <select class="form-select" id="editSpecialization" required>
+                                    <option value="">Select Specialization</option>
+                                    <option value="Cardiology">Cardiology</option>
+                                    <option value="Neurology">Neurology</option>
+                                    <option value="Orthopedics">Orthopedics</option>
+                                    <option value="Pediatrics">Pediatrics</option>
+                                    <option value="General Medicine">General Medicine</option>
+                                    <option value="Dermatology">Dermatology</option>
+                                    <option value="Psychiatry">Psychiatry</option>
+                                    <option value="Surgery">Surgery</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">License Number *</label>
+                                <input type="text" class="form-control" id="editLicenseNumber" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Experience (Years) *</label>
+                                <input type="number" class="form-control" id="editExperienceYears" min="0" max="50" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Working Hours</label>
+                                <input type="text" class="form-control" id="editWorkingHours" placeholder="e.g., 9:00 AM - 5:00 PM">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Consultation Fee</label>
+                                <input type="text" class="form-control" id="editConsultationFee" placeholder="e.g., $100">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Qualifications</label>
+                                <textarea class="form-control" id="editQualifications" rows="3" placeholder="Enter qualifications, certifications, etc."></textarea>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="editAvailableForConsultation">
+                                    <label class="form-check-label" for="editAvailableForConsultation">Available for consultation</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save"></i> Update Doctor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function filterDoctors() {
+            const searchTerm = document.getElementById('searchDoctor').value.toLowerCase();
+            const specializationFilter = document.getElementById('specializationFilter').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+            const doctorCards = document.querySelectorAll('.doctor-card');
+            
+            doctorCards.forEach(card => {
+                const doctorName = card.querySelector('.text-primary').textContent.toLowerCase();
+                const specialization = card.querySelector('.specialization').textContent.toLowerCase();
+                const badges = card.querySelectorAll('.badge');
+                let status = '';
+                badges.forEach(badge => {
+                    if (badge.textContent.toLowerCase().includes('available') || badge.textContent.toLowerCase().includes('busy')) {
+                        status = badge.textContent.toLowerCase();
+                    }
+                });
+                
+                const matchesSearch = doctorName.includes(searchTerm);
+                const matchesSpecialization = !specializationFilter || specialization.includes(specializationFilter);
+                const matchesStatus = !statusFilter || status.includes(statusFilter);
+                
+                if (matchesSearch && matchesSpecialization && matchesStatus) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+        
+        function clearFilters() {
+            document.getElementById('searchDoctor').value = '';
+            document.getElementById('specializationFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            filterDoctors();
+        }
+        
+        function refreshDoctorList() {
+            location.reload();
+        }
+        
+        function viewDoctorSchedule(doctorId) {
+            // Show loading state
+            document.getElementById('doctorDetailsContent').innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading doctor schedule...</p>
+                </div>
+            `;
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('viewDoctorModal'));
+            modal.show();
+            
+            // Fetch doctor schedule
+            fetch(`/admin/api/doctors/${doctorId}/schedule`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                document.getElementById('scheduleDoctorName').textContent = data.doctorName;
+                document.getElementById('doctorDetailsContent').innerHTML = generateScheduleHTML(data);
+            })
+            .catch(error => {
+                console.error('Error loading doctor schedule:', error);
+                document.getElementById('doctorDetailsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Failed to load doctor schedule. Please try again.
+                    </div>
+                `;
+            });
+        }
+        
+        function generateScheduleHTML(data) {
+            let html = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user-md"></i> Doctor Information</h6>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <p><strong>Specialization:</strong> ${data.specialization}</p>
+                                <p><strong>Experience:</strong> ${data.experienceYears} years</p>
+                                <p><strong>Working Hours:</strong> ${data.workingHours || 'Not specified'}</p>
+                                <p><strong>Consultation Fee:</strong> ${data.consultationFee || 'Not specified'}</p>
+                                <p><strong>Status:</strong> 
+                                    <span class="badge ${data.availableForConsultation ? 'bg-success' : 'bg-warning'}">
+                                        ${data.availableForConsultation ? 'Available' : 'Busy'}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chart-line"></i> Statistics</h6>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <h4 class="text-primary">${data.todayAppointments}</h4>
+                                        <small class="text-muted">Today</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <h4 class="text-success">${data.thisWeekAppointments}</h4>
+                                        <small class="text-muted">This Week</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <h4 class="text-info">${data.totalPatients}</h4>
+                                        <small class="text-muted">Total Patients</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h6><i class="fas fa-calendar-alt"></i> Upcoming Appointments</h6>
+                        <div class="card">
+                            <div class="card-body">
+            `;
+            
+            if (data.upcomingAppointments && data.upcomingAppointments.length > 0) {
+                html += '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Date & Time</th><th>Patient</th><th>Reason</th><th>Status</th></tr></thead><tbody>';
+                
+                data.upcomingAppointments.forEach(appointment => {
+                    const statusClass = {
+                        'CONFIRMED': 'success',
+                        'SCHEDULED': 'primary',
+                        'CANCELLED': 'danger',
+                        'COMPLETED': 'info'
+                    }[appointment.status] || 'secondary';
+                    
+                    html += `
+                        <tr>
+                            <td>${appointment.appointmentDateTime}</td>
+                            <td>${appointment.patientName}</td>
+                            <td>${appointment.reason || 'Regular checkup'}</td>
+                            <td><span class="badge bg-${statusClass}">${appointment.status}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+            } else {
+                html += '<p class="text-muted text-center py-3"><i class="fas fa-calendar-times fa-2x mb-2"></i><br>No upcoming appointments</p>';
+            }
+            
+            html += `
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+        
+        function editDoctor(doctorId) {
+            // Get CSRF token
+            const token = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const header = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+            
+            // Fetch doctor data
+            fetch(`/admin/doctors/${doctorId}/edit`, {
+                method: 'GET',
+                headers: {
+                    [header]: token
+                }
+            })
+                .then(response => response.json())
+                .then(doctor => {
+                    // Populate the edit form
+                    document.getElementById('editFullName').value = doctor.fullName || '';
+                    document.getElementById('editEmail').value = doctor.email || '';
+                    document.getElementById('editPhoneNumber').value = doctor.phoneNumber || '';
+                    document.getElementById('editSpecialization').value = doctor.specialization || '';
+                    document.getElementById('editLicenseNumber').value = doctor.licenseNumber || '';
+                    document.getElementById('editExperienceYears').value = doctor.experienceYears || '';
+                    document.getElementById('editWorkingHours').value = doctor.workingHours || '';
+                    document.getElementById('editConsultationFee').value = doctor.consultationFee || '';
+                    document.getElementById('editQualifications').value = doctor.qualifications || '';
+                    document.getElementById('editAvailableForConsultation').checked = doctor.availableForConsultation || false;
+                    
+                    // Store doctor ID for form submission
+                    document.getElementById('editDoctorForm').setAttribute('data-doctor-id', doctorId);
+                    
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('editDoctorModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error fetching doctor:', error);
+                    alert('Error loading doctor data. Please try again.');
+                });
+        }
+        
+        // Handle edit form submission
+        document.getElementById('editDoctorForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get CSRF token
+            const token = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const header = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+            
+            const doctorId = this.getAttribute('data-doctor-id');
+            const formData = {
+                fullName: document.getElementById('editFullName').value,
+                email: document.getElementById('editEmail').value,
+                phoneNumber: document.getElementById('editPhoneNumber').value,
+                specialization: document.getElementById('editSpecialization').value,
+                licenseNumber: document.getElementById('editLicenseNumber').value,
+                experienceYears: parseInt(document.getElementById('editExperienceYears').value),
+                workingHours: document.getElementById('editWorkingHours').value,
+                consultationFee: document.getElementById('editConsultationFee').value,
+                qualifications: document.getElementById('editQualifications').value,
+                availableForConsultation: document.getElementById('editAvailableForConsultation').checked
+            };
+            
+            // Submit the update
+            fetch(`/admin/doctors/${doctorId}/update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [header]: token
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal and refresh page
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editDoctorModal'));
+                    modal.hide();
+                    
+                    // Show success message and refresh
+                    alert('Doctor updated successfully!');
+                    location.reload();
+                } else {
+                    alert('Error updating doctor: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating doctor:', error);
+                alert('Error updating doctor. Please try again.');
+            });
+        });
+    </script>
+</body>
+</html>

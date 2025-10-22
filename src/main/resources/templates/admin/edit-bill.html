@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Edit Bill - Admin</title>
+    <style>
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .amount-input {
+            background: #e9ecef;
+            border: 2px solid #ced4da;
+        }
+        .amount-input:focus {
+            background: white;
+            border-color: #007bff;
+        }
+        .total-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .readonly-field {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2><i class="fas fa-edit"></i> Edit Bill #<span th:text="${bill.id}"></span></h2>
+                        <div>
+                            <a th:href="@{/bills/admin/view/{id}(id=${bill.id})}" class="btn btn-info">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                            <a href="/bills/admin" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Bills
+                            </a>
+                        </div>
+                    </div>
+
+                    <form th:action="@{/bills/admin/edit/{id}(id=${bill.id})}" method="post" id="billForm">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- Appointment Details (Read-only) -->
+                                <div class="form-section">
+                                    <h5><i class="fas fa-calendar-check"></i> Appointment Details</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Patient</label>
+                                                <input type="text" class="form-control readonly-field" readonly
+                                                       th:value="${bill.patient.fullName}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Doctor</label>
+                                                <input type="text" class="form-control readonly-field" readonly
+                                                       th:value="'Dr. ' + ${bill.appointment.doctor.fullName}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Appointment Date</label>
+                                                <input type="text" class="form-control readonly-field" readonly
+                                                       th:value="${#temporals.format(bill.appointment.appointmentDateTime, 'MMM dd, yyyy HH:mm')}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>Bill Date</label>
+                                                <input type="text" class="form-control readonly-field" readonly
+                                                       th:value="${#temporals.format(bill.billDate, 'MMM dd, yyyy HH:mm')}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Billing Details -->
+                                <div class="form-section">
+                                    <h5><i class="fas fa-calculator"></i> Billing Details</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="consultationFee">Consultation Fee * (₹)</label>
+                                                <input type="number" step="0.01" min="0" name="consultationFee" 
+                                                       id="consultationFee" class="form-control amount-input" 
+                                                       th:value="${bill.consultationFee}" required onchange="calculateTotal()">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="medicineCost">Medicine Cost (₹)</label>
+                                                <input type="number" step="0.01" min="0" name="medicineCost" 
+                                                       id="medicineCost" class="form-control amount-input" 
+                                                       th:value="${bill.medicineCost}" onchange="calculateTotal()">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="testCost">Test/Lab Cost (₹)</label>
+                                                <input type="number" step="0.01" min="0" name="testCost" 
+                                                       id="testCost" class="form-control amount-input" 
+                                                       th:value="${bill.testCost}" onchange="calculateTotal()">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="roomCharges">Room Charges (₹)</label>
+                                                <input type="number" step="0.01" min="0" name="roomCharges" 
+                                                       id="roomCharges" class="form-control amount-input" 
+                                                       th:value="${bill.roomCharges}" onchange="calculateTotal()">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="otherCharges">Other Charges (₹)</label>
+                                                <input type="number" step="0.01" min="0" name="otherCharges" 
+                                                       id="otherCharges" class="form-control amount-input" 
+                                                       th:value="${bill.otherCharges}" onchange="calculateTotal()">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="discount">Discount (₹)</label>
+                                                <input type="number" step="0.01" min="0" name="discount" 
+                                                       id="discount" class="form-control amount-input" 
+                                                       th:value="${bill.discount}" onchange="calculateTotal()">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="notes">Notes</label>
+                                        <textarea name="notes" id="notes" class="form-control" rows="3" 
+                                                  th:text="${bill.notes}"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <!-- Current Status -->
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6>Current Status</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <span class="badge" 
+                                              th:classappend="${bill.paymentStatus.name().toLowerCase() == 'paid'} ? 'bg-success' : 
+                                                             (${bill.paymentStatus.name().toLowerCase() == 'pending'} ? 'bg-warning' : 'bg-danger')"
+                                              th:text="${bill.paymentStatus}"></span>
+                                        <div th:if="${bill.paymentDate}" class="mt-2 small text-muted">
+                                            Paid on: <span th:text="${#temporals.format(bill.paymentDate, 'MMM dd, yyyy HH:mm')}"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Total Calculation -->
+                                <div class="total-display mb-4">
+                                    <div>Total Amount</div>
+                                    <div id="totalAmount" th:text="'₹' + ${bill.formattedTotalAmount}"></div>
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-warning btn-lg">
+                                        <i class="fas fa-save"></i> Update Bill
+                                    </button>
+                                    <a th:href="@{/bills/admin/view/{id}(id=${bill.id})}" class="btn btn-outline-info">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                    <a href="/bills/admin" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function calculateTotal() {
+                const consultationFee = parseFloat(document.getElementById('consultationFee').value) || 0;
+                const medicineCost = parseFloat(document.getElementById('medicineCost').value) || 0;
+                const testCost = parseFloat(document.getElementById('testCost').value) || 0;
+                const roomCharges = parseFloat(document.getElementById('roomCharges').value) || 0;
+                const otherCharges = parseFloat(document.getElementById('otherCharges').value) || 0;
+                const discount = parseFloat(document.getElementById('discount').value) || 0;
+                
+                const total = consultationFee + medicineCost + testCost + roomCharges + otherCharges - discount;
+                document.getElementById('totalAmount').textContent = '₹' + Math.max(0, total).toFixed(2);
+            }
+            
+            document.addEventListener('DOMContentLoaded', function() {
+                calculateTotal();
+            });
+        </script>
+    </div>
+</body>
+</html>
