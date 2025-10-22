@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Doctors - Manipal Hospital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .doctors-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .doctor-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            background: white;
+        }
+        .doctor-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        .doctor-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+            margin: 0 auto 1rem;
+            border: 4px solid white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .specialization-badge {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+        .experience-badge {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .fee-badge {
+            background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .availability-badge {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 0.25rem 0.7rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .unavailable-badge {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 0.25rem 0.7rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .btn-book-appointment {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .btn-book-appointment:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+        .btn-book-appointment:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-view-profile {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        .btn-view-profile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            color: white;
+        }
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .search-box {
+            position: relative;
+        }
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+        .search-box input {
+            padding-left: 45px;
+            border-radius: 25px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        .search-box input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .stats-cards {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            flex: 1;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-3px);
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stats-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+            color: #dee2e6;
+        }
+        .doctor-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .rating-stars {
+            color: #ffc107;
+            margin: 0.5rem 0;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .info-item i {
+            color: #667eea;
+            width: 20px;
+            margin-right: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-info">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/}">
+                <i class="fas fa-hospital"></i> Manipal Hospital - Patient
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> <span sec:authentication="name">Patient</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/patient/dashboard}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><a class="dropdown-item" th:href="@{/patient/appointments}"><i class="fas fa-calendar-alt"></i> My Appointments</a></li>
+                        <li><a class="dropdown-item" th:href="@{/patient/book-appointment}"><i class="fas fa-plus"></i> Book Appointment</a></li>
+                        <li><a class="dropdown-item" th:href="@{/patient/profile}"><i class="fas fa-user"></i> Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" th:href="@{/logout}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar and Main Content -->
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="list-group">
+                    <a th:href="@{/patient/dashboard}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a th:href="@{/patient/appointments}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar-alt"></i> My Appointments
+                    </a>
+                    <a th:href="@{/patient/book-appointment}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-plus"></i> Book Appointment
+                    </a>
+                    <a th:href="@{/patient/doctors}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-user-md"></i> Find Doctors
+                    </a>
+                    <a th:href="@{/bills/patient}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-invoice-dollar"></i> My Bills
+                    </a>
+                    <a th:href="@{/patient/profile}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user"></i> My Profile
+                    </a>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="doctors-container">
+                    <!-- Page Header - Always Visible -->
+                    <div class="text-center mb-4">
+                        <h2 class="text-primary mb-2">
+                            <i class="fas fa-user-md me-2"></i>Find Our Doctors
+                        </h2>
+                        <p class="text-muted">Browse our qualified medical professionals and book your consultation</p>
+                    </div>
+
+                    <!-- Always show some content for debugging -->
+                    <div class="alert alert-success mb-3" th:if="${doctors != null and !doctors.isEmpty()}">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Found <span th:text="${#lists.size(doctors)}">0</span> doctors in <span th:text="${#lists.size(specializations)}">0</span> specializations
+                    </div>
+
+                    <!-- Statistics Cards -->
+                    <div class="stats-cards" th:if="${doctors != null and !doctors.isEmpty()}">
+                        <div class="stats-card">
+                            <div class="stats-number" th:text="${#lists.size(doctors)}">12</div>
+                            <div class="stats-label">Available Doctors</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="stats-number" th:text="${#lists.size(specializations)}">8</div>
+                            <div class="stats-label">Specializations</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="stats-number">
+                                <span th:text="${doctors != null ? #lists.size(doctors) : 0}">10</span>
+                            </div>
+                            <div class="stats-label">Total Doctors</div>
+                        </div>
+                    </div>
+
+                    <!-- Filter and Search Section -->
+                    <div class="filter-section" th:if="${doctors != null and !doctors.isEmpty()}">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-search me-2"></i>Find the Right Doctor
+                        </h5>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Search by Name</label>
+                                <div class="search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" class="form-control" id="doctorSearch" placeholder="Enter doctor's name...">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Specialization</label>
+                                <select class="form-select" id="specializationFilter">
+                                    <option value="">All Specializations</option>
+                                    <option th:each="spec : ${specializations}" 
+                                            th:value="${spec}" 
+                                            th:text="${spec}"
+                                            th:selected="${spec == selectedSpecialization}">Cardiology</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Availability</label>
+                                <select class="form-select" id="availabilityFilter">
+                                    <option value="">All Doctors</option>
+                                    <option value="available">Available Now</option>
+                                    <option value="busy">Currently Busy</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Experience Level</label>
+                                <select class="form-select" id="experienceFilter">
+                                    <option value="">Any Experience</option>
+                                    <option value="0-5">0-5 Years</option>
+                                    <option value="5-10">5-10 Years</option>
+                                    <option value="10-20">10-20 Years</option>
+                                    <option value="20+">20+ Years</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                                    <i class="fas fa-undo me-2"></i>Clear Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Doctors Grid -->
+                    <div th:if="${doctors != null and !doctors.isEmpty()}">
+                        <div class="row" id="doctorsGrid">
+                            <div class="col-lg-6 col-xl-4" th:each="doctor : ${doctors}">
+                                <div class="doctor-card" 
+                                     th:data-name="${#strings.toLowerCase(doctor.fullName)}"
+                                     th:data-specialization="${doctor.specialization}"
+                                     th:data-availability="${doctor.availableForConsultation ? 'available' : 'busy'}"
+                                     th:data-experience="${doctor.experienceYears}">
+                                     
+                                    <div class="doctor-header">
+                                        <div class="doctor-avatar">
+                                            <i class="fas fa-user-md"></i>
+                                        </div>
+                                        <h5 class="mb-1" th:text="${doctor.fullName}">Dr. John Smith</h5>
+                                        <div class="specialization-badge" th:text="${doctor.specialization}">Cardiology</div>
+                                        <div class="rating-stars">
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <span class="ms-1 text-muted">(4.9)</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card-body">
+                                        <div class="info-item">
+                                            <i class="fas fa-graduation-cap"></i>
+                                            <div>
+                                                <strong>Experience:</strong>
+                                                <span th:text="${doctor.experienceYears + ' years'}">5 years</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="info-item">
+                                            <i class="fas fa-certificate"></i>
+                                            <div>
+                                                <strong>Qualifications:</strong><br>
+                                                <small th:text="${doctor.qualifications ?: 'Qualified Medical Professional'}">MBBS, MD</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="info-item">
+                                            <i class="fas fa-clock"></i>
+                                            <div>
+                                                <strong>Working Hours:</strong>
+                                                <span th:text="${doctor.workingHours ?: 'Contact for schedule'}">9 AM - 5 PM</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="info-item">
+                                            <i class="fas fa-dollar-sign"></i>
+                                            <div>
+                                                <strong>Consultation Fee:</strong>
+                                                <span class="fee-badge" th:text="${doctor.consultationFee ?: 'Contact for fee'}">$100</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="info-item">
+                                            <i class="fas fa-phone"></i>
+                                            <div>
+                                                <strong>Contact:</strong>
+                                                <span th:text="${doctor.phoneNumber ?: 'Contact reception'}">+1-555-0123</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-center mt-3 mb-3">
+                                            <span th:if="${doctor.availableForConsultation}" class="availability-badge">
+                                                <i class="fas fa-check me-1"></i>Available Now
+                                            </span>
+                                            <span th:unless="${doctor.availableForConsultation}" class="unavailable-badge">
+                                                <i class="fas fa-clock me-1"></i>Currently Busy
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="d-grid gap-2">
+                                            <a th:href="@{/patient/book-appointment(doctorId=${doctor.id})}" 
+                                               class="btn btn-book-appointment"
+                                               th:classappend="${!doctor.availableForConsultation ? ' disabled' : ''}"
+                                               th:onclick="${!doctor.availableForConsultation ? 'return false;' : ''}">
+                                                <i class="fas fa-calendar-plus me-2"></i>
+                                                <span th:text="${doctor.availableForConsultation ? 'Book Appointment' : 'Currently Unavailable'}">
+                                                    Book Appointment
+                                                </span>
+                                            </a>
+                                            
+                                            <button class="btn btn-view-profile" 
+                                                    onclick="showDoctorDetails(this)"
+                                                    th:data-doctor-id="${doctor.id}"
+                                                    th:data-doctor-name="${doctor.fullName}"
+                                                    th:data-specialization="${doctor.specialization}"
+                                                    th:data-experience="${doctor.experienceYears}"
+                                                    th:data-qualifications="${doctor.qualifications}"
+                                                    th:data-fee="${doctor.consultationFee}"
+                                                    th:data-hours="${doctor.workingHours}"
+                                                    th:data-phone="${doctor.phoneNumber}"
+                                                    th:data-email="${doctor.email}">
+                                                <i class="fas fa-info-circle me-2"></i>View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div th:if="${doctors == null or doctors.isEmpty()}" class="empty-state">
+                        <i class="fas fa-user-md-slash"></i>
+                        <h4>No Doctors Found</h4>
+                        <p class="mb-4">
+                            <span th:if="${selectedSpecialization}">
+                                No doctors available for <strong th:text="${selectedSpecialization}">selected specialization</strong> at the moment.
+                            </span>
+                            <span th:unless="${selectedSpecialization}">
+                                <br>• All doctors are currently unavailable
+                            </span>
+                        </p>
+                        <div class="mt-3">
+                            <a th:href="@{/patient/doctors}" class="btn btn-book-appointment me-2" style="width: auto;">
+                                <i class="fas fa-refresh me-2"></i>Refresh Page
+                            </a>
+                            <a th:href="@{/patient/dashboard}" class="btn btn-outline-primary" style="width: auto;">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Fallback content - Always visible for debugging -->
+                    <div class="text-center mt-4">
+                        <p class="text-muted">
+                            <small>Page loaded successfully. If you don't see doctors above, please restart the application to load sample data.</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Doctors Modal -->
+    <div class="modal fade" id="doctorDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-md me-2"></i>All Doctors Directory
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- Loading Spinner -->
+                    <div id="modalLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading all doctors...</p>
+                    </div>
+
+                    <!-- Modal Content - All Doctors Cards -->
+                    <div id="modalContent" style="display: none;">
+                        <div class="row" id="modalDoctorsGrid">
+                            <!-- Doctors will be loaded here dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="modalError" style="display: none;" class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+                        <h5>Unable to Load Doctors</h5>
+                        <p class="text-muted">Please try again later or contact support.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-book-appointment" onclick="window.location.href='/patient/book-appointment'">
+                        <i class="fas fa-calendar-plus me-2"></i>Book New Appointment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Filter functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const doctorSearch = document.getElementById('doctorSearch');
+            const specializationFilter = document.getElementById('specializationFilter');
+            const availabilityFilter = document.getElementById('availabilityFilter');
+            const experienceFilter = document.getElementById('experienceFilter');
+            const doctorCards = document.querySelectorAll('.doctor-card');
+
+            function filterDoctors() {
+                const searchValue = doctorSearch ? doctorSearch.value.toLowerCase() : '';
+                const specializationValue = specializationFilter ? specializationFilter.value : '';
+                const availabilityValue = availabilityFilter ? availabilityFilter.value : '';
+                const experienceValue = experienceFilter ? experienceFilter.value : '';
+
+                doctorCards.forEach(card => {
+                    let showCard = true;
+                    
+                    // Name search
+                    if (searchValue && !card.dataset.name.includes(searchValue)) {
+                        showCard = false;
+                    }
+                    
+                    // Specialization filter
+                    if (specializationValue && card.dataset.specialization !== specializationValue) {
+                        showCard = false;
+                    }
+                    
+                    // Availability filter
+                    if (availabilityValue && card.dataset.availability !== availabilityValue) {
+                        showCard = false;
+                    }
+                    
+                    // Experience filter
+                    if (experienceValue) {
+                        const experience = parseInt(card.dataset.experience);
+                        switch(experienceValue) {
+                            case '0-5':
+                                if (experience > 5) showCard = false;
+                                break;
+                            case '5-10':
+                                if (experience < 5 || experience > 10) showCard = false;
+                                break;
+                            case '10-20':
+                                if (experience < 10 || experience > 20) showCard = false;
+                                break;
+                            case '20+':
+                                if (experience < 20) showCard = false;
+                                break;
+                        }
+                    }
+                    
+                    card.parentElement.style.display = showCard ? 'block' : 'none';
+                });
+            }
+
+            // Add event listeners
+            if (doctorSearch) doctorSearch.addEventListener('input', filterDoctors);
+            if (specializationFilter) specializationFilter.addEventListener('change', filterDoctors);
+            if (availabilityFilter) availabilityFilter.addEventListener('change', filterDoctors);
+            if (experienceFilter) experienceFilter.addEventListener('change', filterDoctors);
+        });
+
+        function clearFilters() {
+            document.getElementById('doctorSearch').value = '';
+            document.getElementById('specializationFilter').value = '';
+            document.getElementById('availabilityFilter').value = '';
+            document.getElementById('experienceFilter').value = '';
+            
+            // Show all cards
+            document.querySelectorAll('.doctor-card').forEach(card => {
+                card.parentElement.style.display = 'block';
+            });
+        }
+
+        function showDoctorDetails(button) {
+            const modal = new bootstrap.Modal(document.getElementById('doctorDetailsModal'));
+            
+            // Show modal with loading state
+            document.getElementById('modalLoading').style.display = 'block';
+            document.getElementById('modalContent').style.display = 'none';
+            document.getElementById('modalError').style.display = 'none';
+            
+            modal.show();
+            
+            // Fetch all doctors data from API
+            Promise.all([
+                fetch('/patient/api/doctors/all').then(response => {
+                    if (!response.ok) {
+                        // Fallback: use existing page data if API not available
+                        return getExistingDoctorsData();
+                    }
+                    return response.json();
+                }).catch(() => {
+                    // Fallback: use existing page data
+                    return getExistingDoctorsData();
+                })
+            ])
+            .then(([doctors]) => {
+                // Hide loading and show content
+                document.getElementById('modalLoading').style.display = 'none';
+                document.getElementById('modalContent').style.display = 'block';
+                
+                // Generate doctors cards
+                const modalGrid = document.getElementById('modalDoctorsGrid');
+                modalGrid.innerHTML = '';
+                
+                doctors.forEach(doctor => {
+                    const doctorCard = createDoctorCard(doctor);
+                    modalGrid.appendChild(doctorCard);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading doctors:', error);
+                
+                // Hide loading and show error
+                document.getElementById('modalLoading').style.display = 'none';
+                document.getElementById('modalContent').style.display = 'none';
+                document.getElementById('modalError').style.display = 'block';
+            });
+        }
+
+        function getExistingDoctorsData() {
+            // Extract doctor data from existing page elements
+            const doctorCards = document.querySelectorAll('.doctor-card');
+            const doctors = [];
+            
+            doctorCards.forEach(card => {
+                const doctor = {
+                    id: card.querySelector('.btn-view-profile')?.dataset.doctorId || Math.random(),
+                    fullName: card.querySelector('.btn-view-profile')?.dataset.doctorName || 'Doctor',
+                    specialization: card.querySelector('.btn-view-profile')?.dataset.specialization || 'General',
+                    experienceYears: card.querySelector('.btn-view-profile')?.dataset.experience || '5',
+                    consultationFee: card.querySelector('.btn-view-profile')?.dataset.fee || 'Contact for fee',
+                    workingHours: card.querySelector('.btn-view-profile')?.dataset.hours || '9 AM - 5 PM',
+                    phoneNumber: card.querySelector('.btn-view-profile')?.dataset.phone || 'Contact reception',
+                    email: card.querySelector('.btn-view-profile')?.dataset.email || 'Contact reception',
+                    qualifications: card.querySelector('.btn-view-profile')?.dataset.qualifications || 'Qualified Professional',
+                    availableForConsultation: card.querySelector('.availability-badge') !== null,
+                    rating: 4.5 + Math.random() * 0.4, // Mock rating
+                    totalReviews: 50 + Math.floor(Math.random() * 100),
+                    totalPatients: 100 + Math.floor(Math.random() * 200),
+                    successRate: 85 + Math.floor(Math.random() * 15)
+                };
+                doctors.push(doctor);
+            });
+            
+            return doctors;
+        }
+
+        function createDoctorCard(doctor) {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-lg-4 mb-4';
+            
+            const rating = Math.round(doctor.rating * 10) / 10;
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = (rating % 1) >= 0.5;
+            let starsHtml = '';
+            
+            for (let i = 0; i < fullStars; i++) {
+                starsHtml += '<i class="fas fa-star"></i>';
+            }
+            if (hasHalfStar) {
+                starsHtml += '<i class="fas fa-star-half-alt"></i>';
+            }
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            for (let i = 0; i < emptyStars; i++) {
+                starsHtml += '<i class="far fa-star"></i>';
+            }
+            
+            col.innerHTML = `
+                <div class="doctor-card h-100">
+                    <div class="doctor-header">
+                        <div class="doctor-avatar">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <h6 class="mb-1">${doctor.fullName}</h6>
+                        <div class="specialization-badge">${doctor.specialization}</div>
+                        <div class="rating-stars">
+                            ${starsHtml}
+                            <span class="ms-1 text-muted">(${rating}) - ${doctor.totalReviews} reviews</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="info-item">
+                            <i class="fas fa-graduation-cap"></i>
+                            <div>
+                                <strong>Experience:</strong>
+                                <span>${doctor.experienceYears} years</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="fas fa-certificate"></i>
+                            <div>
+                                <strong>Qualifications:</strong><br>
+                                <small>${doctor.qualifications}</small>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <strong>Working Hours:</strong>
+                                <span>${doctor.workingHours}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="fas fa-dollar-sign"></i>
+                            <div>
+                                <strong>Consultation Fee:</strong>
+                                <span class="fee-badge">${doctor.consultationFee}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="fas fa-phone"></i>
+                            <div>
+                                <strong>Contact:</strong>
+                                <span>${doctor.phoneNumber}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-3 mb-3">
+                            <span class="${doctor.availableForConsultation ? 'availability-badge' : 'unavailable-badge'}">
+                                <i class="fas fa-${doctor.availableForConsultation ? 'check' : 'clock'} me-1"></i>
+                                ${doctor.availableForConsultation ? 'Available Now' : 'Currently Busy'}
+                            </span>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="/patient/book-appointment?doctorId=${doctor.id}" 
+                               class="btn btn-book-appointment ${!doctor.availableForConsultation ? 'disabled' : ''}">
+                                <i class="fas fa-calendar-plus me-2"></i>
+                                ${doctor.availableForConsultation ? 'Book Appointment' : 'Currently Unavailable'}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return col;
+        }
+    </script>
+</body>
+</html>

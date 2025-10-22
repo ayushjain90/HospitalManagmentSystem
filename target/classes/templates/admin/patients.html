@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>Manage Patients - Manipal Hospital</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/}">
+                <i class="fas fa-hospital"></i> Manipal Hospital - Admin
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> <span sec:authentication="name">Admin</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/admin/dashboard}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" th:href="@{/logout}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="list-group">
+                    <a th:href="@{/admin/dashboard}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a th:href="@{/admin/patients}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-users"></i> Patients
+                    </a>
+                    <a th:href="@{/admin/doctors}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-md"></i> Doctors
+                    </a>
+                    <a th:href="@{/admin/appointments}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-calendar-alt"></i> Appointments
+                    </a>
+                    <a th:href="@{/bills/admin}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-invoice-dollar"></i> Bills
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-users text-info"></i> Patient Management</h2>
+                    <div>
+                        <button class="btn btn-outline-primary me-2" onclick="refreshPatientList()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-success" onclick="exportPatients()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Alert Messages -->
+                <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle"></i> <span th:text="${message}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i> <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                
+                <!-- Search and Filter -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" class="form-control" id="searchPatient" placeholder="Search patients..." onkeyup="filterPatients()">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="genderFilter" onchange="filterPatients()">
+                                    <option value="">All Genders</option>
+                                    <option value="MALE">Male</option>
+                                    <option value="FEMALE">Female</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="bloodGroupFilter" onchange="filterPatients()">
+                                    <option value="">All Blood Groups</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                    <i class="fas fa-times"></i> Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Patient Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="h5 mb-0" th:text="${totalPatients ?: 0}">0</div>
+                                        <div class="small">Total Patients</div>
+                                    </div>
+                                    <div><i class="fas fa-users fa-2x opacity-75"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="h5 mb-0" th:text="${activePatients ?: 0}">0</div>
+                                        <div class="small">Active Patients</div>
+                                    </div>
+                                    <div><i class="fas fa-user-check fa-2x opacity-75"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="h5 mb-0" th:text="${criticalPatients ?: 0}">0</div>
+                                        <div class="small">Critical Cases</div>
+                                    </div>
+                                    <div><i class="fas fa-exclamation-triangle fa-2x opacity-75"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="h5 mb-0" th:text="${newPatientsThisMonth ?: 0}">0</div>
+                                        <div class="small">New This Month</div>
+                                    </div>
+                                    <div><i class="fas fa-user-plus fa-2x opacity-75"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Patients Table -->
+                <div class="card shadow">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-table"></i> Patients List</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive" id="patientsContainer">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Patient Info</th>
+                                        <th>Contact Details</th>
+                                        <th>Medical Info</th>
+                                        <th>Registration</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="patient : ${patients}" th:if="${patients != null and !patients.isEmpty()}" class="patient-row">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <div class="avatar-circle" th:classappend="${patient.gender == 'MALE'} ? 'bg-primary' : (${patient.gender == 'FEMALE'} ? 'bg-pink' : 'bg-secondary')">
+                                                        <i class="fas" th:classappend="${patient.gender == 'MALE'} ? 'fa-mars' : (${patient.gender == 'FEMALE'} ? 'fa-venus' : 'fa-user')"></i>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <strong class="patient-name" th:text="${patient.fullName}">Patient Name</strong><br>
+                                                    <small class="text-muted">ID: <span th:text="${patient.id}">123</span></small><br>
+                                                    <small class="text-muted patient-gender" th:text="${patient.gender}">Gender</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div class="mb-1">
+                                                    <i class="fas fa-envelope text-primary"></i>
+                                                    <small th:text="${patient.email}">email@example.com</small>
+                                                </div>
+                                                <div class="mb-1">
+                                                    <i class="fas fa-phone text-success"></i>
+                                                    <small th:text="${patient.phoneNumber}">+1234567890</small>
+                                                </div>
+                                                <div class="mb-1" th:if="${patient.emergencyContact}">
+                                                    <i class="fas fa-phone-alt text-warning"></i>
+                                                    <small th:text="${patient.emergencyContact}">Emergency</small>
+                                                </div>
+                                                <div>
+                                                    <i class="fas fa-map-marker-alt text-info"></i>
+                                                    <small th:text="${#strings.abbreviate(patient.address, 30)}">Address...</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div class="mb-1">
+                                                    <i class="fas fa-birthday-cake text-warning"></i>
+                                                    <small th:text="${#temporals.format(patient.dateOfBirth, 'MMM dd, yyyy')}">DOB</small>
+                                                </div>
+                                                <div class="mb-1" th:if="${patient.bloodGroup}">
+                                                    <i class="fas fa-tint text-danger"></i>
+                                                    <span class="badge bg-danger patient-blood-group" th:text="${patient.bloodGroup}">B+</span>
+                                                </div>
+                                                <div th:if="${patient.medicalHistory}">
+                                                    <i class="fas fa-notes-medical text-info"></i>
+                                                    <small th:text="${#strings.abbreviate(patient.medicalHistory, 50)}">Medical history...</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div class="mb-1">
+                                                    <i class="fas fa-calendar text-primary"></i>
+                                                    <small th:text="${#temporals.format(patient.createdAt, 'MMM dd, yyyy')}">Registered</small>
+                                                </div>
+                                                <div>
+                                                    <i class="fas fa-user text-secondary"></i>
+                                                    <small th:text="${patient.username}">username</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge" th:classappend="${patient.enabled} ? 'bg-success' : 'bg-danger'" th:text="${patient.enabled} ? 'Active' : 'Inactive'">Status</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" th:onclick="'viewPatient(' + ${patient.id} + ')'">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-success btn-sm" th:onclick="'editPatient(' + ${patient.id} + ')'">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-info btn-sm" th:onclick="'viewMedicalRecords(' + ${patient.id} + ')'" title="Medical Records">
+                                                    <i class="fas fa-file-medical"></i>
+                                                </button>
+                                                <form th:if="${!patient.enabled}" th:action="@{'/admin/users/' + ${patient.id} + '/enable'}" method="post" style="display: inline;">
+                                                    <button type="submit" class="btn btn-outline-success btn-sm" title="Enable Patient">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                </form>
+                                                <form th:if="${patient.enabled}" th:action="@{'/admin/users/' + ${patient.id} + '/disable'}" method="post" style="display: inline;">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Disable Patient" onclick="return confirm('Are you sure you want to disable this patient?')">
+                                                        <i class="fas fa-ban"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr th:if="${patients == null or patients.isEmpty()}">
+                                        <td colspan="6" class="text-center py-5">
+                                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                            <h5 class="text-muted">No Patients Found</h5>
+                                            <p class="text-muted">Patients will appear here as they register.</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- View Patient Modal -->
+    <div class="modal fade" id="viewPatientModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-calendar-alt"></i> Patient Appointments</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="patientDetailsContent">
+                    <!-- Patient details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" onclick="scheduleNewAppointment()">
+                        <i class="fas fa-plus"></i> Schedule New Appointment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Patient Modal -->
+    <div class="modal fade" id="editPatientModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Patient</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="editPatientContent">
+                    <!-- Edit form will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Medical Records Modal -->
+    <div class="modal fade" id="medicalRecordsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-medical"></i> Medical Records - <span id="medicalRecordsPatientName"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="medicalRecordsContent">
+                    <!-- Medical records will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="printMedicalRecords()">
+                        <i class="fas fa-print"></i> Print Records
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function filterPatients() {
+            const searchTerm = document.getElementById('searchPatient').value.toLowerCase();
+            const genderFilter = document.getElementById('genderFilter').value.toLowerCase();
+            const bloodGroupFilter = document.getElementById('bloodGroupFilter').value.toLowerCase();
+            const patientRows = document.querySelectorAll('.patient-row');
+            
+            patientRows.forEach(row => {
+                const patientName = row.querySelector('.patient-name').textContent.toLowerCase();
+                const patientGender = row.querySelector('.patient-gender').textContent.toLowerCase();
+                const bloodGroupElement = row.querySelector('.patient-blood-group');
+                const bloodGroup = bloodGroupElement ? bloodGroupElement.textContent.toLowerCase() : '';
+                
+                const matchesSearch = patientName.includes(searchTerm);
+                const matchesGender = !genderFilter || patientGender.includes(genderFilter);
+                const matchesBloodGroup = !bloodGroupFilter || bloodGroup.includes(bloodGroupFilter);
+                
+                if (matchesSearch && matchesGender && matchesBloodGroup) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        function clearFilters() {
+            document.getElementById('searchPatient').value = '';
+            document.getElementById('genderFilter').value = '';
+            document.getElementById('bloodGroupFilter').value = '';
+            filterPatients();
+        }
+        
+        function refreshPatientList() {
+            location.reload();
+        }
+        
+        function exportPatients() {
+            alert('Export functionality will be implemented in the next update.');
+        }
+        
+        function viewPatient(patientId) {
+            document.getElementById('patientDetailsContent').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading patient appointments...</p>
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('viewPatientModal'));
+            modal.show();
+            
+            // Fetch patient appointments
+            fetch(`/admin/api/patients/${patientId}/appointments`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load appointments');
+                    }
+                    return response.json();
+                })
+                .then(appointments => {
+                    let appointmentsHtml = `
+                        <div class="mb-3">
+                            <h6 class="text-muted"><i class="fas fa-user"></i> Patient ID: ${patientId}</h6>
+                        </div>
+                    `;
+                    
+                    if (appointments.length === 0) {
+                        appointmentsHtml += `
+                            <div class="alert alert-info text-center">
+                                <i class="fas fa-calendar-times fa-2x mb-2"></i>
+                                <h5>No Appointments Found</h5>
+                                <p class="mb-0">This patient has no scheduled appointments.</p>
+                            </div>
+                        `;
+                    } else {
+                        appointmentsHtml += `
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Date & Time</th>
+                                            <th>Doctor</th>
+                                            <th>Status</th>
+                                            <th>Reason</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+                        
+                        appointments.forEach(appointment => {
+                            const statusClass = {
+                                'CONFIRMED': 'success',
+                                'PENDING': 'warning',
+                                'CANCELLED': 'danger',
+                                'COMPLETED': 'info',
+                                'SCHEDULED': 'primary'
+                            }[appointment.status] || 'secondary';
+                            
+                            appointmentsHtml += `
+                                <tr>
+                                    <td>
+                                        <strong>${appointment.appointmentDateTime}</strong>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-user-md"></i> ${appointment.doctorName}<br>
+                                        <small class="text-muted">${appointment.doctorSpecialization}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-${statusClass}">${appointment.status}</span>
+                                    </td>
+                                    <td>${appointment.reason || 'Not specified'}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editAppointmentFromPatient(${appointment.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        appointmentsHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                    
+                    document.getElementById('patientDetailsContent').innerHTML = appointmentsHtml;
+                })
+                .catch(error => {
+                    console.error('Error loading appointments:', error);
+                    document.getElementById('patientDetailsContent').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Failed to load patient appointments. Please try again.
+                        </div>
+                    `;
+                });
+        }
+        
+        function editPatient(patientId) {
+            document.getElementById('editPatientContent').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading patient information...</p>
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('editPatientModal'));
+            modal.show();
+            
+            // Fetch patient data
+            fetch(`/admin/patients/${patientId}/edit`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load patient data');
+                    }
+                    return response.json();
+                })
+                .then(patient => {
+                    const birthDate = patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '';
+                    
+                    document.getElementById('editPatientContent').innerHTML = `
+                        <form id="editPatientForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editFullName" class="form-label">Full Name *</label>
+                                        <input type="text" class="form-control" id="editFullName" value="${patient.fullName || ''}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editEmail" class="form-label">Email *</label>
+                                        <input type="email" class="form-control" id="editEmail" value="${patient.email || ''}" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editPhoneNumber" class="form-label">Phone Number *</label>
+                                        <input type="tel" class="form-control" id="editPhoneNumber" value="${patient.phoneNumber || ''}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="editEmergencyContact" class="form-label">Emergency Contact</label>
+                                        <input type="tel" class="form-control" id="editEmergencyContact" value="${patient.emergencyContact || ''}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="editDateOfBirth" class="form-label">Date of Birth *</label>
+                                        <input type="date" class="form-control" id="editDateOfBirth" value="${birthDate}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="editGender" class="form-label">Gender *</label>
+                                        <select class="form-select" id="editGender" required>
+                                            <option value="">Select Gender</option>
+                                            <option value="MALE" ${patient.gender === 'MALE' ? 'selected' : ''}>Male</option>
+                                            <option value="FEMALE" ${patient.gender === 'FEMALE' ? 'selected' : ''}>Female</option>
+                                            <option value="OTHER" ${patient.gender === 'OTHER' ? 'selected' : ''}>Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="editBloodGroup" class="form-label">Blood Group</label>
+                                        <select class="form-select" id="editBloodGroup">
+                                            <option value="">Select Blood Group</option>
+                                            <option value="A+" ${patient.bloodGroup === 'A+' ? 'selected' : ''}>A+</option>
+                                            <option value="A-" ${patient.bloodGroup === 'A-' ? 'selected' : ''}>A-</option>
+                                            <option value="B+" ${patient.bloodGroup === 'B+' ? 'selected' : ''}>B+</option>
+                                            <option value="B-" ${patient.bloodGroup === 'B-' ? 'selected' : ''}>B-</option>
+                                            <option value="AB+" ${patient.bloodGroup === 'AB+' ? 'selected' : ''}>AB+</option>
+                                            <option value="AB-" ${patient.bloodGroup === 'AB-' ? 'selected' : ''}>AB-</option>
+                                            <option value="O+" ${patient.bloodGroup === 'O+' ? 'selected' : ''}>O+</option>
+                                            <option value="O-" ${patient.bloodGroup === 'O-' ? 'selected' : ''}>O-</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editAddress" class="form-label">Address *</label>
+                                <textarea class="form-control" id="editAddress" rows="2" required>${patient.address || ''}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editMedicalHistory" class="form-label">Medical History</label>
+                                <textarea class="form-control" id="editMedicalHistory" rows="3" 
+                                          placeholder="Enter any relevant medical history...">${patient.medicalHistory || ''}</textarea>
+                            </div>
+                        </form>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-success" onclick="savePatientChanges(${patientId})">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading patient:', error);
+                    document.getElementById('editPatientContent').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Failed to load patient information. Please try again.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    `;
+                });
+        }
+        
+        function savePatientChanges(patientId) {
+            const form = document.getElementById('editPatientForm');
+            const formData = new FormData(form);
+            
+            // Collect form data
+            const patientData = {
+                fullName: document.getElementById('editFullName').value,
+                email: document.getElementById('editEmail').value,
+                phoneNumber: document.getElementById('editPhoneNumber').value,
+                emergencyContact: document.getElementById('editEmergencyContact').value,
+                dateOfBirth: document.getElementById('editDateOfBirth').value,
+                gender: document.getElementById('editGender').value,
+                bloodGroup: document.getElementById('editBloodGroup').value,
+                address: document.getElementById('editAddress').value,
+                medicalHistory: document.getElementById('editMedicalHistory').value
+            };
+            
+            // Validate required fields
+            if (!patientData.fullName || !patientData.email || !patientData.phoneNumber || 
+                !patientData.dateOfBirth || !patientData.gender || !patientData.address) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // Show loading state
+            const saveButton = event.target;
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            // Get CSRF token
+            const token = document.querySelector("meta[name='_csrf']").getAttribute("content");
+            const header = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+            
+            // Send update request
+            fetch(`/admin/patients/${patientId}/update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [header]: token
+                },
+                body: JSON.stringify(patientData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(text || 'Failed to update patient');
+                    });
+                }
+                return response.text();
+            })
+            .then(data => {
+                // Try to parse as JSON, fallback to treating as plain text
+                let result;
+                try {
+                    result = JSON.parse(data);
+                } catch (e) {
+                    result = { success: true, message: 'Patient updated successfully' };
+                }
+                
+                // Success
+                alert(result.message || 'Patient updated successfully!');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editPatientModal'));
+                modal.hide();
+                
+                // Refresh the page to show updated data
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            })
+            .catch(error => {
+                console.error('Error updating patient:', error);
+                alert('Failed to update patient. Please try again.');
+                
+                // Reset button state
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+            });
+        }
+        
+        function scheduleAppointments(patientId) {
+            // This will open the appointment scheduling functionality
+            window.location.href = '/admin/appointments?patientId=' + patientId;
+        }
+        
+        function scheduleNewAppointment() {
+            alert('Schedule new appointment functionality will redirect to appointments page.');
+            window.location.href = '/admin/appointments';
+        }
+        
+        function editAppointmentFromPatient(appointmentId) {
+            // Redirect to appointments page with the specific appointment to edit
+            window.location.href = '/admin/appointments?editId=' + appointmentId;
+        }
+        
+        function viewMedicalRecords(patientId) {
+            // Open medical records modal
+            fetch(`/admin/api/patients/${patientId}/medical-records`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                document.getElementById('medicalRecordsPatientName').textContent = data.patientName;
+                document.getElementById('medicalRecordsContent').innerHTML = generateMedicalRecordsHTML(data);
+                
+                const modal = new bootstrap.Modal(document.getElementById('medicalRecordsModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error loading medical records:', error);
+                alert('Failed to load medical records. Please try again.');
+            });
+        }
+        
+        function generateMedicalRecordsHTML(data) {
+            let html = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user"></i> Basic Information</h6>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <p><strong>Age:</strong> ${data.age} years</p>
+                                <p><strong>Gender:</strong> ${data.gender}</p>
+                                <p><strong>Blood Group:</strong> ${data.bloodGroup || 'Not specified'}</p>
+                                <p><strong>Emergency Contact:</strong> ${data.emergencyContact || 'Not specified'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-notes-medical"></i> Medical History</h6>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <p>${data.medicalHistory || 'No medical history recorded'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <h6><i class="fas fa-prescription-bottle-alt"></i> Recent Prescriptions</h6>
+                        <div class="card">
+                            <div class="card-body">
+            `;
+            
+            if (data.recentPrescriptions && data.recentPrescriptions.length > 0) {
+                html += '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Date</th><th>Doctor</th><th>Prescription</th></tr></thead><tbody>';
+                
+                data.recentPrescriptions.forEach(prescription => {
+                    html += `
+                        <tr>
+                            <td>${prescription.date}</td>
+                            <td>${prescription.doctorName}</td>
+                            <td>${prescription.prescription}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+            } else {
+                html += '<p class="text-muted">No prescriptions recorded</p>';
+            }
+            
+            html += `
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+        
+        function printPatientDetails() {
+            window.print();
+        }
+        
+        function printMedicalRecords() {
+            // Create a new window for printing medical records
+            const printWindow = window.open('', '_blank');
+            const patientName = document.getElementById('medicalRecordsPatientName').textContent;
+            const content = document.getElementById('medicalRecordsContent').innerHTML;
+            
+            const htmlContent = '<html>' +
+                    '<head>' +
+                        '<title>Medical Records - ' + patientName + '</title>' +
+                        '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">' +
+                        '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">' +
+                        '<style>' +
+                            'body { padding: 20px; }' +
+                            '@media print { .no-print { display: none; } }' +
+                        '</style>' +
+                    '</head>' +
+                    '<body>' +
+                        '<div class="container">' +
+                            '<h2><i class="fas fa-file-medical"></i> Medical Records</h2>' +
+                            '<h4>' + patientName + '</h4>' +
+                            '<hr>' +
+                            content +
+                        '</div>' +
+                        '<script>' +
+                            'window.onload = function() {' +
+                                'window.print();' +
+                                'window.onafterprint = function() {' +
+                                    'window.close();' +
+                                '};' +
+                            '};' +
+                        '<\\/script>' +
+                    '</body>' +
+                '</html>';
+            
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+        }
+    </script>
+    
+    <style>
+        .avatar-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .bg-pink {
+            background-color: #e91e63 !important;
+        }
+        
+        .table th {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .table td {
+            font-size: 0.85rem;
+            vertical-align: middle;
+        }
+        
+        .btn-group .btn {
+            margin-right: 2px;
+        }
+        
+        .badge {
+            font-size: 0.75rem;
+        }
+    </style>
+</body>
+</html>

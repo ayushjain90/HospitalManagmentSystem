@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Create Bill - Admin</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="create-bill-container">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="page-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h2 class="page-title"><i class="fas fa-plus-circle"></i> Create New Bill</h2>
+                                <a href="/bills/admin" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Bills
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="form-container">
+                            <form th:action="@{/bills/admin/create}" method="post" id="billForm">
+                                <div class="row">
+                                    <div class="col-lg-8">
+                                        <!-- Appointment Selection -->
+                                        <div class="form-section appointment">
+                                            <h5 class="section-title"><i class="fas fa-calendar-check"></i> Appointment Details</h5>
+                                            <div class="input-group">
+                                                <label for="appointmentId">Select Appointment *</label>
+                                                <select name="appointmentId" id="appointmentId" class="form-control" required>
+                                                    <option value="">Choose an appointment to bill...</option>
+                                                    <option th:each="appointment : ${availableAppointments}" 
+                                                            th:value="${appointment.id}"
+                                                            th:if="${appointment.patient != null and appointment.doctor != null}"
+                                                            th:text="'#' + ${appointment.id} + ' - ' + ${appointment.patient.fullName} + ' - Dr. ' + ${appointment.doctor.fullName} + ' (' + ${#temporals.format(appointment.appointmentDateTime, 'MMM dd, yyyy HH:mm')} + ')'">
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Pre-selected appointment details -->
+                                            <div th:if="${appointment != null and appointment.patient != null and appointment.doctor != null}" class="appointment-info">
+                                                <h6><i class="fas fa-info-circle"></i> Selected Appointment Details</h6>
+                                                <p><strong>Patient:</strong> <span th:text="${appointment.patient.fullName}"></span></p>
+                                                <p><strong>Doctor:</strong> <span th:text="'Dr. ' + ${appointment.doctor.fullName}"></span></p>
+                                                <p><strong>Date:</strong> <span th:text="${#temporals.format(appointment.appointmentDateTime, 'MMM dd, yyyy HH:mm')}"></span></p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Billing Details -->
+                                        <div class="form-section billing">
+                                            <h5 class="section-title"><i class="fas fa-calculator"></i> Service Charges</h5>
+                                            <div class="form-row">
+                                                <div class="input-group">
+                                                    <label for="consultationFee">Consultation Fee * (₹)</label>
+                                                    <input type="number" step="0.01" min="0" name="consultationFee" 
+                                                           id="consultationFee" class="form-control amount-input" 
+                                                           value="150.00" required onchange="calculateTotal()">
+                                                </div>
+                                                <div class="input-group">
+                                                    <label for="medicineCost">Medicine Cost (₹)</label>
+                                                    <input type="number" step="0.01" min="0" name="medicineCost" 
+                                                           id="medicineCost" class="form-control amount-input" 
+                                                           value="0.00" onchange="calculateTotal()">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="form-row">
+                                                <div class="input-group">
+                                                    <label for="testCost">Test/Lab Cost (₹)</label>
+                                                    <input type="number" step="0.01" min="0" name="testCost" 
+                                                           id="testCost" class="form-control amount-input" 
+                                                           value="0.00" onchange="calculateTotal()">
+                                                </div>
+                                                <div class="input-group">
+                                                    <label for="roomCharges">Room Charges (₹)</label>
+                                                    <input type="number" step="0.01" min="0" name="roomCharges" 
+                                                           id="roomCharges" class="form-control amount-input" 
+                                                           value="0.00" onchange="calculateTotal()">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="form-row">
+                                                <div class="input-group">
+                                                    <label for="otherCharges">Other Charges (₹)</label>
+                                                    <input type="number" step="0.01" min="0" name="otherCharges" 
+                                                           id="otherCharges" class="form-control amount-input" 
+                                                           value="0.00" onchange="calculateTotal()">
+                                                </div>
+                                                <div class="input-group">
+                                                    <label for="discount">Discount (₹)</label>
+                                                    <input type="number" step="0.01" min="0" name="discount" 
+                                                           id="discount" class="form-control amount-input" 
+                                                           value="0.00" onchange="calculateTotal()">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="input-group full-width">
+                                                <label for="notes">Additional Notes</label>
+                                                <textarea name="notes" id="notes" class="form-control" rows="3" 
+                                                          placeholder="Enter any additional notes about this bill..."></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-lg-4">
+                                        <!-- Total Calculation Sidebar -->
+                                        <div class="total-sidebar">
+                                            <div class="total-card">
+                                                <div class="total-header">
+                                                    <i class="fas fa-calculator"></i>
+                                                    <h6>Bill Summary</h6>
+                                                </div>
+                                                
+                                                <div class="calculation-breakdown">
+                                                    <div class="calculation-row">
+                                                        <span>Consultation Fee:</span>
+                                                        <span id="displayConsultation">₹150.00</span>
+                                                    </div>
+                                                    <div class="calculation-row">
+                                                        <span>Medicine Cost:</span>
+                                                        <span id="displayMedicine">₹0.00</span>
+                                                    </div>
+                                                    <div class="calculation-row">
+                                                        <span>Test/Lab Cost:</span>
+                                                        <span id="displayTest">₹0.00</span>
+                                                    </div>
+                                                    <div class="calculation-row">
+                                                        <span>Room Charges:</span>
+                                                        <span id="displayRoom">₹0.00</span>
+                                                    </div>
+                                                    <div class="calculation-row">
+                                                        <span>Other Charges:</span>
+                                                        <span id="displayOther">₹0.00</span>
+                                                    </div>
+                                                    <div class="calculation-row">
+                                                        <span>Discount:</span>
+                                                        <span id="displayDiscount">-₹0.00</span>
+                                                    </div>
+                                                    <div class="calculation-row total-row">
+                                                        <span>Total Amount:</span>
+                                                        <span id="totalAmount">₹150.00</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="action-buttons">
+                                                    <button type="submit" class="btn btn-primary btn-lg">
+                                                        <i class="fas fa-save"></i> Create Bill
+                                                    </button>
+                                                    <a href="/bills/admin" class="btn btn-outline-secondary">
+                                                        <i class="fas fa-arrow-left"></i> Back to Bills
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function calculateTotal() {
+                const consultationFee = parseFloat(document.getElementById('consultationFee').value) || 0;
+                const medicineCost = parseFloat(document.getElementById('medicineCost').value) || 0;
+                const testCost = parseFloat(document.getElementById('testCost').value) || 0;
+                const roomCharges = parseFloat(document.getElementById('roomCharges').value) || 0;
+                const otherCharges = parseFloat(document.getElementById('otherCharges').value) || 0;
+                const discount = parseFloat(document.getElementById('discount').value) || 0;
+                
+                // Update individual displays
+                document.getElementById('displayConsultation').textContent = '₹' + consultationFee.toFixed(2);
+                document.getElementById('displayMedicine').textContent = '₹' + medicineCost.toFixed(2);
+                document.getElementById('displayTest').textContent = '₹' + testCost.toFixed(2);
+                document.getElementById('displayRoom').textContent = '₹' + roomCharges.toFixed(2);
+                document.getElementById('displayOther').textContent = '₹' + otherCharges.toFixed(2);
+                document.getElementById('displayDiscount').textContent = '-₹' + discount.toFixed(2);
+                
+                // Calculate and display total
+                const total = consultationFee + medicineCost + testCost + roomCharges + otherCharges - discount;
+                document.getElementById('totalAmount').textContent = '₹' + Math.max(0, total).toFixed(2);
+            }
+            
+            // Pre-select appointment if coming from appointment page
+            document.addEventListener('DOMContentLoaded', function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const appointmentId = urlParams.get('appointmentId');
+                if (appointmentId) {
+                    document.getElementById('appointmentId').value = appointmentId;
+                }
+                calculateTotal();
+            });
+        </script>
+    </div>
+</body>
+</html>

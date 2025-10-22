@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Bills Management - Admin</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="bills-container">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="bills-header">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="page-title"><i class="fas fa-file-invoice-dollar"></i> Bills Management</h2>
+                                <a href="/bills/admin/create" class="create-bill-btn">
+                                    <i class="fas fa-plus"></i> Create New Bill
+                                </a>
+                            </div>
+                            
+                            <!-- Statistics Cards -->
+                            <div class="bills-stats">
+                                <div class="stat-card revenue">
+                                    <div class="stat-value">₹45,250</div>
+                                    <div class="stat-label">Total Revenue</div>
+                                </div>
+                                <div class="stat-card pending">
+                                    <div class="stat-value">8</div>
+                                    <div class="stat-label">Pending Bills</div>
+                                </div>
+                                <div class="stat-card overdue">
+                                    <div class="stat-value">3</div>
+                                    <div class="stat-label">Overdue Bills</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">24</div>
+                                    <div class="stat-label">Total Bills</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bills-table-container">
+                            <div th:if="${#lists.isEmpty(bills)}" class="empty-state">
+                                <i class="fas fa-file-invoice"></i>
+                                <h4>No Bills Found</h4>
+                                <p>Start by creating your first bill to track patient payments and medical services.</p>
+                                <a href="/bills/admin/create" class="create-bill-btn mt-3">
+                                    <i class="fas fa-plus"></i> Create First Bill
+                                </a>
+                            </div>
+
+                            <div th:unless="${#lists.isEmpty(bills)}">
+                                <table class="table bills-table">
+                                    <thead>
+                                        <tr>
+                                            <th><i class="fas fa-hashtag me-2"></i>Bill ID</th>
+                                            <th><i class="fas fa-user me-2"></i>Patient</th>
+                                            <th><i class="fas fa-rupee-sign me-2"></i>Amount</th>
+                                            <th><i class="fas fa-info-circle me-2"></i>Status</th>
+                                            <th><i class="fas fa-calendar me-2"></i>Date</th>
+                                            <th><i class="fas fa-cogs me-2"></i>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="bill : ${bills}">
+                                            <td class="bill-id" th:text="'#' + ${bill.id}">1</td>
+                                            <td class="patient-name" th:text="${bill.patient.fullName}">Patient Name</td>
+                                            <td class="bill-amount" th:text="'₹' + ${bill.formattedTotalAmount}">₹100.00</td>
+                                            <td>
+                                                <span th:class="'status-badge status-' + ${bill.paymentStatus.name().toLowerCase()}" 
+                                                      th:text="${bill.paymentStatus}">PENDING</span>
+                                            </td>
+                                            <td class="bill-date" th:text="${#temporals.format(bill.billDate, 'MMM dd, yyyy')}">Oct 22, 2025</td>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <a th:href="@{/bills/admin/view/{id}(id=${bill.id})}" 
+                                                       class="btn-action btn-view">
+                                                        <i class="fas fa-eye"></i> View
+                                                    </a>
+                                                    <a th:href="@{/bills/admin/edit/{id}(id=${bill.id})}" 
+                                                       class="btn-action btn-edit"
+                                                       th:if="${bill.paymentStatus.name() == 'PENDING'}">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

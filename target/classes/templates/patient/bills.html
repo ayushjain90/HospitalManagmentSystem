@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>My Bills - Patient</title>
+    <style>
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-paid { background-color: #28a745; }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-cancelled { background-color: #dc3545; }
+        .status-refunded { background-color: #6c757d; }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .bill-amount {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .unpaid-amount {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2><i class="fas fa-file-invoice-dollar"></i> My Bills</h2>
+                    </div>
+                    
+                    <!-- Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="summary-card">
+                                <h3 th:text="${#lists.size(bills)}">0</h3>
+                                <p>Total Bills</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="summary-card">
+                                <h3 class="unpaid-amount" th:text="'₹' + ${#numbers.formatDecimal(totalUnpaid ?: 0, 1, 2)}">₹0.00</h3>
+                                <p>Outstanding Amount</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bills Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Bill History</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Bill #</th>
+                                            <th>Doctor</th>
+                                            <th>Appointment Date</th>
+                                            <th>Bill Date</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="bill : ${bills}">
+                                            <td th:text="'#' + ${bill.id}"></td>
+                                            <td>
+                                                <div th:text="'Dr. ' + ${bill.appointment.doctor.fullName}"></div>
+                                                <small class="text-muted" th:text="${bill.appointment.doctor.specialization}"></small>
+                                            </td>
+                                            <td th:text="${#temporals.format(bill.appointment.appointmentDateTime, 'MMM dd, yyyy')}"></td>
+                                            <td th:text="${#temporals.format(bill.billDate, 'MMM dd, yyyy')}"></td>
+                                            <td class="bill-amount" th:text="'₹' + ${bill.formattedTotalAmount}"></td>
+                                            <td>
+                                                <span class="status-badge" 
+                                                      th:classappend="${bill.paymentStatus.name().toLowerCase() == 'paid'} ? 'status-paid' : 
+                                                                     (${bill.paymentStatus.name().toLowerCase() == 'pending'} ? 'status-pending' : 
+                                                                     (${bill.paymentStatus.name().toLowerCase() == 'cancelled'} ? 'status-cancelled' : 'status-refunded'))"
+                                                      th:text="${bill.paymentStatus}"></span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a th:href="@{/bills/patient/view/{id}(id=${bill.id})}" 
+                                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a th:href="@{/bills/patient/print/{id}(id=${bill.id})}" 
+                                                       class="btn btn-sm btn-outline-info" title="Print Bill"
+                                                       target="_blank">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr th:if="${#lists.isEmpty(bills)}">
+                                            <td colspan="7" class="text-center text-muted py-4">
+                                                <i class="fas fa-file-invoice fa-3x mb-3"></i>
+                                                <br>No bills found
+                                                <br><small>Your bills will appear here after appointments are completed</small>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Instructions (if there are unpaid bills) -->
+                    <div th:if="${totalUnpaid != null && totalUnpaid > 0}" class="card mt-4">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Outstanding Balance</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>You have an outstanding balance of <strong class="unpaid-amount" th:text="'₹' + ${#numbers.formatDecimal(totalUnpaid, 1, 2)}"></strong>.</p>
+                            <p class="mb-0">Please contact the billing department at <strong>(555) 123-4567</strong> or visit the front desk to make a payment.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

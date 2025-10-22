@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Bills Management - Admin</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h2>Bills Management</h2>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <p th:text="'Total bills: ' + ${#lists.size(bills)}">Total bills: 0</p>
+                            
+                            <div th:if="${#lists.isEmpty(bills)}">
+                                <p>No bills found</p>
+                            </div>
+                            
+                            <div th:if="${!#lists.isEmpty(bills)}">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Status</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="bill : ${bills}">
+                                            <td th:text="${bill.id}">1</td>
+                                            <td th:text="${bill.paymentStatus}">PENDING</td>
+                                            <td th:text="${bill.totalAmount}">100.00</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

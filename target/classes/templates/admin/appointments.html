@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Appointments - Admin Portal</title>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <style>
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .stats-card.warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .stats-card.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .stats-card.info {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        .appointment-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        .appointment-card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-scheduled { background-color: #e3f2fd; color: #1976d2; }
+        .status-confirmed { background-color: #e8f5e8; color: #388e3c; }
+        .status-in_progress { background-color: #fff3e0; color: #f57c00; }
+        .status-completed { background-color: #e8f5e8; color: #2e7d32; }
+        .status-cancelled { background-color: #ffebee; color: #d32f2f; }
+        .status-no_show { background-color: #f3e5f5; color: #7b1fa2; }
+        .search-box {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        .filter-tabs {
+            margin-bottom: 2rem;
+        }
+        .filter-tabs .nav-link {
+            border: none;
+            background: transparent;
+            color: #666;
+            font-weight: 500;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            margin-right: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .filter-tabs .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .appointment-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            border-radius: 20px;
+        }
+        .priority-indicator {
+            width: 4px;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            border-radius: 10px 0 0 10px;
+        }
+        .priority-high { background-color: #f44336; }
+        .priority-medium { background-color: #ff9800; }
+        .priority-low { background-color: #4caf50; }
+        .appointment-time {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .appointment-date {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        .doctor-info, .patient-info {
+            background: #f8f9fa;
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" th:href="@{/}">
+                <i class="fas fa-hospital"></i> Manipal Hospital - Admin
+            </a>
+            
+            <div class="navbar-nav">
+                <a class="nav-link" th:href="@{/admin/dashboard}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a class="nav-link" th:href="@{/admin/doctors}"><i class="fas fa-user-md"></i> Doctors</a>
+                <a class="nav-link" th:href="@{/admin/patients}"><i class="fas fa-users"></i> Patients</a>
+                <a class="nav-link active" th:href="@{/admin/appointments}"><i class="fas fa-calendar-check"></i> Appointments</a>
+            </div>
+
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> <span sec:authentication="name">Admin</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/admin/dashboard}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" th:href="@{/logout}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2">
+                <div class="list-group">
+                    <a href="/admin/dashboard" class="list-group-item list-group-item-action">
+                        <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                    </a>
+                    <a href="/admin/patients" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-injured me-2"></i> Patients
+                    </a>
+                    <a href="/admin/doctors" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-md me-2"></i> Doctors
+                    </a>
+                    <a href="/admin/appointments" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-calendar-check me-2"></i> Appointments
+                    </a>
+                    <a href="/bills/admin" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-invoice-dollar me-2"></i> Bills
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-calendar-check text-primary me-2"></i>Appointment Management</h2>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleAppointmentModal">
+                        <i class="fas fa-plus me-2"></i>Schedule New Appointment
+                    </button>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">Total Appointments</h6>
+                                    <h3 class="mb-0" th:text="${totalAppointments ?: 0}">0</h3>
+                                </div>
+                                <i class="fas fa-calendar-alt fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card success">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">Today's Appointments</h6>
+                                    <h3 class="mb-0" th:text="${todayAppointments ?: 0}">0</h3>
+                                </div>
+                                <i class="fas fa-calendar-day fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card warning">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">Pending Confirmations</h6>
+                                    <h3 class="mb-0" th:text="${pendingConfirmations ?: 0}">0</h3>
+                                </div>
+                                <i class="fas fa-clock fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card info">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">Completed Today</h6>
+                                    <h3 class="mb-0" th:text="${completedToday ?: 0}">0</h3>
+                                </div>
+                                <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="search-box">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search appointments...">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="statusFilter">
+                                <option value="">All Status</option>
+                                <option value="SCHEDULED">Scheduled</option>
+                                <option value="CONFIRMED">Confirmed</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="COMPLETED">Completed</option>
+                                <option value="CANCELLED">Cancelled</option>
+                                <option value="NO_SHOW">No Show</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="date" class="form-control" id="dateFilter">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-primary w-100" onclick="clearFilters()">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Tabs -->
+                <ul class="nav nav-pills filter-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-status="all" href="#" onclick="filterByStatus('all')">All</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-status="today" href="#" onclick="filterByStatus('today')">Today</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-status="upcoming" href="#" onclick="filterByStatus('upcoming')">Upcoming</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-status="completed" href="#" onclick="filterByStatus('completed')">Completed</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-status="cancelled" href="#" onclick="filterByStatus('cancelled')">Cancelled</a>
+                    </li>
+                </ul>
+
+                <!-- Appointments List -->
+                <div id="appointmentsList">
+                    <div th:if="${appointments == null or #lists.isEmpty(appointments)}" class="text-center py-5">
+                        <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No appointments found</h4>
+                        <p class="text-muted">Start by scheduling a new appointment</p>
+                    </div>
+                    
+                    <div th:each="appointment : ${appointments}" class="appointment-card position-relative" 
+                         th:data-status="${appointment.status}"
+                         th:data-date="${appointment.appointmentDateTime}">
+                        
+                        <!-- Priority Indicator -->
+                        <div class="priority-indicator priority-medium"></div>
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="appointment-time" th:text="${#temporals.format(appointment.appointmentDateTime, 'HH:mm')}">10:00</div>
+                                <div class="appointment-date" th:text="${#temporals.format(appointment.appointmentDateTime, 'MMM dd, yyyy')}">Jan 15, 2024</div>
+                                <span class="status-badge mt-2" 
+                                      th:classappend="${'status-' + #strings.toLowerCase(appointment.status)}"
+                                      th:text="${appointment.status}">SCHEDULED</span>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="patient-info">
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-user me-2"></i>
+                                        <span th:text="${appointment.patient.fullName ?: 'N/A'}">Patient Name</span>
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-phone me-1"></i>
+                                        <span th:text="${appointment.patient.phoneNumber ?: 'N/A'}">+1234567890</span>
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        <span th:text="${appointment.patient.email ?: 'N/A'}">patient@email.com</span>
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="doctor-info">
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-user-md me-2"></i>
+                                        Dr. <span th:text="${appointment.doctor.fullName ?: 'N/A'}">Doctor Name</span>
+                                    </h6>
+                                    <small class="text-muted" th:text="${appointment.doctor.specialization ?: 'N/A'}">Specialization</small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-map-marker-alt me-1"></i>Room 101
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <div class="appointment-actions">
+                                    <button class="btn btn-sm btn-outline-primary btn-action" 
+                                            th:onclick="|viewAppointment(${appointment.id})|">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success btn-action"
+                                            th:if="${appointment.status == 'SCHEDULED'}"
+                                            th:onclick="|confirmAppointment(${appointment.id})|">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning btn-action"
+                                            th:onclick="|editAppointment(${appointment.id})|">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger btn-action"
+                                            th:if="${appointment.status != 'COMPLETED' and appointment.status != 'CANCELLED'}"
+                                            th:onclick="|cancelAppointment(${appointment.id})|">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div th:if="${appointment.reason}" class="mt-3">
+                            <strong>Reason:</strong> <span th:text="${appointment.reason}">Consultation reason</span>
+                        </div>
+                        
+                        <div th:if="${appointment.notes}" class="mt-2">
+                            <strong>Notes:</strong> <span th:text="${appointment.notes}">Doctor's notes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Appointment Modal -->
+    <div class="modal fade" id="scheduleAppointmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Schedule New Appointment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="scheduleAppointmentForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="patientSelect" class="form-label">Patient *</label>
+                                    <select class="form-select" id="patientSelect" required>
+                                        <option value="">Select Patient</option>
+                                        <option th:each="patient : ${patients}" 
+                                                th:value="${patient.id}" 
+                                                th:text="${patient.fullName + ' (' + patient.email + ')'}">
+                                            Patient Name
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="doctorSelect" class="form-label">Doctor *</label>
+                                    <select class="form-select" id="doctorSelect" required>
+                                        <option value="">Select Doctor</option>
+                                        <option th:each="doctor : ${doctors}" 
+                                                th:value="${doctor.id}" 
+                                                th:text="${doctor.fullName + ' - ' + doctor.specialization}">
+                                            Doctor Name - Specialization
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="appointmentDate" class="form-label">Date *</label>
+                                    <input type="date" class="form-control" id="appointmentDate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="appointmentTime" class="form-label">Time *</label>
+                                    <input type="time" class="form-control" id="appointmentTime" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="appointmentReason" class="form-label">Reason for Visit</label>
+                            <textarea class="form-control" id="appointmentReason" rows="3" 
+                                      placeholder="Describe the reason for this appointment..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="scheduleAppointment()">
+                        <i class="fas fa-calendar-plus me-2"></i>Schedule Appointment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Appointment Modal -->
+    <div class="modal fade" id="editAppointmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Appointment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editAppointmentForm">
+                        <input type="hidden" id="editAppointmentId">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editPatientSelect" class="form-label">Patient *</label>
+                                    <select class="form-select" id="editPatientSelect" required>
+                                        <option value="">Select Patient</option>
+                                        <option th:each="patient : ${patients}" 
+                                                th:value="${patient.id}" 
+                                                th:text="${patient.fullName + ' (' + patient.email + ')'}">
+                                            Patient Name
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editDoctorSelect" class="form-label">Doctor *</label>
+                                    <select class="form-select" id="editDoctorSelect" required>
+                                        <option value="">Select Doctor</option>
+                                        <option th:each="doctor : ${doctors}" 
+                                                th:value="${doctor.id}" 
+                                                th:text="${doctor.fullName + ' - ' + doctor.specialization}">
+                                            Doctor Name - Specialization
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editAppointmentDate" class="form-label">Date *</label>
+                                    <input type="date" class="form-control" id="editAppointmentDate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editAppointmentTime" class="form-label">Time *</label>
+                                    <input type="time" class="form-control" id="editAppointmentTime" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editAppointmentStatus" class="form-label">Status *</label>
+                                    <select class="form-select" id="editAppointmentStatus" required>
+                                        <option value="SCHEDULED">Scheduled</option>
+                                        <option value="CONFIRMED">Confirmed</option>
+                                        <option value="IN_PROGRESS">In Progress</option>
+                                        <option value="COMPLETED">Completed</option>
+                                        <option value="CANCELLED">Cancelled</option>
+                                        <option value="NO_SHOW">No Show</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAppointmentReason" class="form-label">Reason for Visit</label>
+                            <textarea class="form-control" id="editAppointmentReason" rows="3" 
+                                      placeholder="Describe the reason for this appointment..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAppointmentNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="editAppointmentNotes" rows="2" 
+                                      placeholder="Additional notes..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAppointmentPrescription" class="form-label">Prescription</label>
+                            <textarea class="form-control" id="editAppointmentPrescription" rows="2" 
+                                      placeholder="Prescription details..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateAppointment()">
+                        <i class="fas fa-save me-2"></i>Update Appointment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Appointment Details Modal -->
+    <div class="modal fade" id="viewAppointmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-eye me-2"></i>Appointment Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Patient Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h5 id="modalPatientName" class="text-primary">-</h5>
+                                    <p class="mb-1"><strong>Contact:</strong> <span id="modalPatientContact">-</span></p>
+                                    <p class="mb-0"><strong>Email:</strong> <span id="modalPatientEmail">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-user-md me-2"></i>Doctor Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h5 id="modalDoctorName" class="text-success">-</h5>
+                                    <p class="mb-1"><strong>Specialization:</strong> <span id="modalDoctorSpecialization">-</span></p>
+                                    <p class="mb-0"><strong>Room:</strong> <span id="modalDoctorRoom">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Appointment Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Date & Time:</strong> <span id="modalAppointmentDateTime" class="text-info">-</span></p>
+                                            <p><strong>Status:</strong> <span id="modalAppointmentStatus" class="badge">-</span></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Reason:</strong> <span id="modalAppointmentReason">-</span></p>
+                                        </div>
+                                    </div>
+                                    <div class="row" id="modalNotesSection" style="display: none;">
+                                        <div class="col-12">
+                                            <hr>
+                                            <h6><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+                                            <p id="modalAppointmentNotes" class="text-muted">-</p>
+                                        </div>
+                                    </div>
+                                    <div class="row" id="modalPrescriptionSection" style="display: none;">
+                                        <div class="col-12">
+                                            <hr>
+                                            <h6><i class="fas fa-prescription-bottle-alt me-2"></i>Prescription</h6>
+                                            <p id="modalAppointmentPrescription" class="text-muted">-</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Close
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="editAppointment(document.getElementById('modalAppointmentId').value)">
+                        <i class="fas fa-edit me-2"></i>Edit Appointment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden field to store appointment ID -->
+    <input type="hidden" id="modalAppointmentId" value="">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const appointments = document.querySelectorAll('.appointment-card');
+            
+            appointments.forEach(appointment => {
+                const text = appointment.textContent.toLowerCase();
+                appointment.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+
+        // Status filter
+        document.getElementById('statusFilter').addEventListener('change', function() {
+            const selectedStatus = this.value;
+            const appointments = document.querySelectorAll('.appointment-card');
+            
+            appointments.forEach(appointment => {
+                const status = appointment.dataset.status;
+                appointment.style.display = !selectedStatus || status === selectedStatus ? 'block' : 'none';
+            });
+        });
+
+        // Date filter
+        document.getElementById('dateFilter').addEventListener('change', function() {
+            const selectedDate = this.value;
+            const appointments = document.querySelectorAll('.appointment-card');
+            
+            appointments.forEach(appointment => {
+                const appointmentDate = new Date(appointment.dataset.date).toISOString().split('T')[0];
+                appointment.style.display = !selectedDate || appointmentDate === selectedDate ? 'block' : 'none';
+            });
+        });
+
+        // Filter by status tabs
+        function filterByStatus(status) {
+            const appointments = document.querySelectorAll('.appointment-card');
+            const tabs = document.querySelectorAll('.filter-tabs .nav-link');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            appointments.forEach(appointment => {
+                const appointmentStatus = appointment.dataset.status;
+                const appointmentDate = new Date(appointment.dataset.date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                let show = false;
+                switch(status) {
+                    case 'all':
+                        show = true;
+                        break;
+                    case 'today':
+                        show = appointmentDate.toDateString() === today.toDateString();
+                        break;
+                    case 'upcoming':
+                        show = appointmentDate > today && (appointmentStatus === 'SCHEDULED' || appointmentStatus === 'CONFIRMED');
+                        break;
+                    case 'completed':
+                        show = appointmentStatus === 'COMPLETED';
+                        break;
+                    case 'cancelled':
+                        show = appointmentStatus === 'CANCELLED' || appointmentStatus === 'NO_SHOW';
+                        break;
+                }
+                appointment.style.display = show ? 'block' : 'none';
+            });
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            
+            const appointments = document.querySelectorAll('.appointment-card');
+            appointments.forEach(appointment => {
+                appointment.style.display = 'block';
+            });
+            
+            const tabs = document.querySelectorAll('.filter-tabs .nav-link');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            document.querySelector('.filter-tabs .nav-link[data-status="all"]').classList.add('active');
+        }
+
+        // Appointment actions
+        function viewAppointment(id) {
+            // Fetch appointment details and show in modal
+            fetch(`/admin/api/appointments/${id}`)
+                .then(response => response.json())
+                .then(appointment => {
+                    // Store appointment ID for edit button
+                    document.getElementById('modalAppointmentId').value = appointment.id;
+                    
+                    // Populate modal with appointment details
+                    document.getElementById('modalPatientName').textContent = appointment.patientName;
+                    document.getElementById('modalPatientContact').textContent = 'Not available'; // You can add this to DTO if needed
+                    document.getElementById('modalPatientEmail').textContent = 'Not available'; // You can add this to DTO if needed
+                    
+                    document.getElementById('modalDoctorName').textContent = 'Dr. ' + appointment.doctorName;
+                    document.getElementById('modalDoctorSpecialization').textContent = appointment.doctorSpecialization;
+                    document.getElementById('modalDoctorRoom').textContent = 'Room 101'; // You can add this to DTO if needed
+                    
+                    const appointmentDate = new Date(appointment.appointmentDateTime);
+                    document.getElementById('modalAppointmentDateTime').textContent = appointmentDate.toLocaleString();
+                    
+                    const statusBadge = document.getElementById('modalAppointmentStatus');
+                    statusBadge.textContent = appointment.status;
+                    statusBadge.className = `badge bg-${getStatusColor(appointment.status)}`;
+                    
+                    document.getElementById('modalAppointmentReason').textContent = appointment.reason || 'Not specified';
+                    
+                    // Show/hide notes section
+                    if (appointment.notes && appointment.notes.trim()) {
+                        document.getElementById('modalAppointmentNotes').textContent = appointment.notes;
+                        document.getElementById('modalNotesSection').style.display = 'block';
+                    } else {
+                        document.getElementById('modalNotesSection').style.display = 'none';
+                    }
+                    
+                    // Show/hide prescription section
+                    if (appointment.prescription && appointment.prescription.trim()) {
+                        document.getElementById('modalAppointmentPrescription').textContent = appointment.prescription;
+                        document.getElementById('modalPrescriptionSection').style.display = 'block';
+                    } else {
+                        document.getElementById('modalPrescriptionSection').style.display = 'none';
+                    }
+                    
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('viewAppointmentModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error fetching appointment details');
+                });
+        }
+
+        function confirmAppointment(id) {
+            if (confirm('Confirm this appointment?')) {
+                fetch(`/admin/api/appointments/${id}/confirm`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Appointment confirmed!');
+                        location.reload(); // Refresh the page to show updated status
+                    } else {
+                        alert('Error confirming appointment');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error confirming appointment');
+                });
+            }
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'PENDING':
+                    return 'warning';
+                case 'CONFIRMED':
+                    return 'success';
+                case 'COMPLETED':
+                    return 'primary';
+                case 'CANCELLED':
+                    return 'danger';
+                default:
+                    return 'secondary';
+            }
+        }
+
+
+
+        function updateAppointment() {
+            const token = document.querySelector("meta[name='_csrf']").getAttribute("content");
+            const header = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+            
+            // Validate required fields
+            const appointmentId = document.getElementById('editAppointmentId').value;
+            const patientId = document.getElementById('editPatientSelect').value;
+            const doctorId = document.getElementById('editDoctorSelect').value;
+            const appointmentDate = document.getElementById('editAppointmentDate').value;
+            const appointmentTime = document.getElementById('editAppointmentTime').value;
+            const status = document.getElementById('editAppointmentStatus').value;
+            
+            if (!appointmentId || !patientId || !doctorId || !appointmentDate || !appointmentTime || !status) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            const formData = {
+                id: appointmentId,
+                patientId: patientId,
+                doctorId: doctorId,
+                appointmentDateTime: appointmentDate + 'T' + appointmentTime,
+                status: status,
+                reason: document.getElementById('editAppointmentReason').value || '',
+                notes: document.getElementById('editAppointmentNotes').value || '',
+                prescription: document.getElementById('editAppointmentPrescription').value || ''
+            };
+
+            fetch(`/admin/api/appointments/${formData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [header]: token,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Check if response is JSON or text
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    } else {
+                        return response.text();
+                    }
+                } else {
+                    return response.text().then(text => {
+                        throw new Error(text || 'Error updating appointment');
+                    });
+                }
+            })
+            .then(data => {
+                alert('Appointment updated successfully!');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editAppointmentModal'));
+                modal.hide();
+                location.reload(); // Refresh the page to show updated data
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating appointment: ' + error.message);
+            });
+        }
+
+        function cancelAppointment(id) {
+            if (confirm('Are you sure you want to cancel this appointment?')) {
+                const token = document.querySelector("meta[name='_csrf']").getAttribute("content");
+                const header = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+                
+                fetch(`/admin/api/appointments/${id}/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [header]: token,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Appointment cancelled!');
+                        location.reload(); // Refresh the page to show updated status
+                    } else {
+                        alert('Error cancelling appointment');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error cancelling appointment');
+                });
+            }
+        }
+
+        function editAppointment(id) {
+            // Fetch appointment details and populate the edit modal
+            const token = document.querySelector("meta[name='_csrf']").getAttribute("content");
+            const header = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+            
+            fetch(`/admin/api/appointments/${id}`, {
+                method: 'GET',
+                headers: {
+                    [header]: token,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(appointment => {
+                    // Populate the edit form
+                    document.getElementById('editAppointmentId').value = appointment.id;
+                    
+                    // Set patient and doctor
+                    document.getElementById('editPatientSelect').value = appointment.patientId;
+                    document.getElementById('editDoctorSelect').value = appointment.doctorId;
+                    
+                    // Format date and time
+                    const appointmentDate = new Date(appointment.appointmentDateTime);
+                    document.getElementById('editAppointmentDate').value = appointmentDate.toISOString().split('T')[0];
+                    document.getElementById('editAppointmentTime').value = appointmentDate.toTimeString().slice(0, 5);
+                    
+                    document.getElementById('editAppointmentStatus').value = appointment.status;
+                    document.getElementById('editAppointmentReason').value = appointment.reason || '';
+                    document.getElementById('editAppointmentNotes').value = appointment.notes || '';
+                    document.getElementById('editAppointmentPrescription').value = appointment.prescription || '';
+                    
+                    // Show the edit modal
+                    const modal = new bootstrap.Modal(document.getElementById('editAppointmentModal'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error fetching appointment details');
+                });
+        }
+
+        function scheduleAppointment() {
+            const token = document.querySelector("meta[name='_csrf']").getAttribute("content");
+            const header = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
+            
+            // Validate required fields
+            const patientId = document.getElementById('patientSelect').value;
+            const doctorId = document.getElementById('doctorSelect').value;
+            const appointmentDate = document.getElementById('appointmentDate').value;
+            const appointmentTime = document.getElementById('appointmentTime').value;
+            
+            if (!patientId || !doctorId || !appointmentDate || !appointmentTime) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            const formData = {
+                patientId: patientId,
+                doctorId: doctorId,
+                appointmentDateTime: appointmentDate + 'T' + appointmentTime,
+                reason: document.getElementById('appointmentReason').value || ''
+            };
+
+            fetch('/admin/api/appointments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [header]: token,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Check if response is JSON or text
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    } else {
+                        return response.text();
+                    }
+                } else {
+                    return response.text().then(text => {
+                        throw new Error(text || 'Error scheduling appointment');
+                    });
+                }
+            })
+            .then(data => {
+                alert('New appointment scheduled successfully!');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleAppointmentModal'));
+                modal.hide();
+                
+                // Clear the form
+                document.getElementById('scheduleAppointmentForm').reset();
+                
+                // Refresh the page to show updated data
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error scheduling appointment: ' + error.message);
+            });
+        }
+
+        // Set minimum date to today for date inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('appointmentDate').setAttribute('min', today);
+            document.getElementById('dateFilter').setAttribute('max', new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0]);
+        });
+    </script>
+</body>
+</html>
